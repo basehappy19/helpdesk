@@ -1,4 +1,4 @@
 /node_modules
 /vendor
 /lib/generated/prisma
-.env
+/.env

@@ -8,7 +8,7 @@ try {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    $sql = "SELECT id, name FROM usage_problems";
+    $sql = "SELECT id, code, name_th FROM request_types";
     $stmt = $pdo->prepare($sql);
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

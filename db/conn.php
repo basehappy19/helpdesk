@@ -19,4 +19,3 @@ try {
 } catch (PDOException $e) {
     echo "การเชื่อมต่อฐานข้อมูลล้มเหลว: " . $e->getMessage();
 }
-?>

@@ -12,10 +12,10 @@
 
 <body>
     <?php include './components/navbar.php'; ?>
-    <div class="bg-gradient-to-br from-blue-50 via-white to-indigo-50 min-h-screen py-8 px-4">
-        <div class="max-w-5xl mx-auto">
+    <div class="bg-gradient-to-br from-blue-50 via-white to-indigo-50 min-h-screen py-8 md:px-4">
+        <div class="w-full container mx-auto">
             <!-- Header Card -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6 card-hover">
+            <div class="bg-white md:rounded-2xl shadow-sm border border-gray-100 p-8 mb-6 card-hover">
                 <div class="flex items-center gap-4">
                     <div class="bg-blue-600 rounded-xl p-3">
                         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -23,14 +23,14 @@
                         </svg>
                     </div>
                     <div>
-                        <h1 class="text-3xl font-bold text-gray-900">แจ้งปัญหา/ขอรับบริการ</h1>
+                        <h1 class="text-3xl font-bold text-gray-900">แจ้งปัญหา</h1>
                         <p class="text-gray-500 mt-1">กรุณากรอกข้อมูลให้ครบถ้วนเพื่อความรวดเร็วในการให้บริการ</p>
                     </div>
                 </div>
             </div>
 
             <!-- Form Card -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 card-hover">
+            <div class="bg-white md:rounded-2xl shadow-sm border border-gray-100 p-8 card-hover">
                 <form class="space-y-8" method="POST" action="/api/reports/create_ticket.php" novalidate>
 
                     <!-- Section 1: ข้อมูลปัญหา -->

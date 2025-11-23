@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host   = 'localhost';
 $apiUrl = $scheme . '://' . $host . '/api/reports/get_reports.php';
@@ -30,23 +28,13 @@ function latest_status(array $ticket): ?array
         return null;
     }
 
-    // log ล่าสุดจะอยู่ index 0 (เพราะ sort DESC แล้ว)
     $latest = $ticket['ticket_status_logs'][0] ?? null;
     if (!$latest) return null;
 
     return [
         'name'  => $latest['to_status_name'] ?? '-',
-        'style' => $latest['to_status_style'] ?? '', // alias ที่มาจาก API
+        'style' => $latest['to_status_style'] ?? '',
     ];
-}
-
-
-function formatDateThaiBuddhist(string $datetime, ?DateTimeZone $tz = null): string
-{
-    $tz = $tz ?: new DateTimeZone('Asia/Bangkok');
-    $dt = new DateTime($datetime, $tz);
-    $year_th = (int)$dt->format('Y') + 543;
-    return $dt->format('d/m/') . $year_th . $dt->format(' H:i');
 }
 
 function diffLargestThai(string $datetime, ?DateTimeZone $tz = null): string
@@ -71,7 +59,7 @@ function diffLargestThai(string $datetime, ?DateTimeZone $tz = null): string
 
     foreach ($units as $label => $secsPerUnit) {
         if ($diffSec >= $secsPerUnit) {
-            $value = intdiv($diffSec, $secsPerUnit); // ปัดลง เช่น 61 นาที = 1 ชั่วโมง
+            $value = intdiv($diffSec, $secsPerUnit);
             return $value . ' ' . $label . 'ที่ผ่านมา';
         }
     }
@@ -92,8 +80,8 @@ function diffLargestThai(string $datetime, ?DateTimeZone $tz = null): string
 
 <body>
     <?php include './components/navbar.php'; ?>
-    <div class="bg-gradient-to-br from-blue-50 via-white to-indigo-50 min-h-screen py-8 md:px-4">
-        <div class="w-full container mx-auto">
+    <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen py-8 px-4">
+        <div class="max-w-6xl mx-auto">
 
             <div class="bg-white md:rounded-xl shadow-sm border border-gray-100 p-8 mt-6">
                 <div class="flex items-center justify-between mb-6">
@@ -176,7 +164,7 @@ function diffLargestThai(string $datetime, ?DateTimeZone $tz = null): string
                                             </td>
                                             </span>
                                             <td class="px-6 py-4 text-center">
-                                                <a href="/ticket.php?id=<?= urlencode((string)($r['id'] ?? '')) ?>"
+                                                <a href="/?page=work&id=<?= urlencode((string)($r['id'] ?? '')) ?>"
                                                     class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-150">
                                                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

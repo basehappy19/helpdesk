@@ -12,8 +12,8 @@
 
 <body>
     <?php include './components/navbar.php'; ?>
-    <div class="bg-gradient-to-br from-blue-50 via-white to-indigo-50 min-h-screen py-8 md:px-4">
-        <div class="w-full container mx-auto">
+    <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen py-8 px-4">
+        <div class="max-w-5xl mx-auto">
             <!-- Header Card -->
             <div class="bg-white md:rounded-2xl shadow-sm border border-gray-100 p-8 mb-6 card-hover">
                 <div class="flex items-center gap-4">

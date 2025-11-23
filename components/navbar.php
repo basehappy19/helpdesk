@@ -5,14 +5,18 @@
             <!-- Logo & Brand -->
             <div class="flex items-center space-x-8">
                 <a href="./" class="flex items-center space-x-3 group">
-                    <div class="relative">
-                        <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                        <div class="relative bg-gradient-to-r from-indigo-600 to-purple-600 p-2.5 rounded-xl">
-                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-                            </svg>
+                    <div class="relative group">
+                        <!-- Glow layer -->
+                        <div class="absolute
+                rounded-xl blur-md opacity-40 group-hover:opacity-60 transition"></div>
+
+                        <!-- Logo container -->
+                        <div class="relative
+                p-2.5 rounded-xl flex items-center justify-center shadow-md">
+                            <img src="./public/logo.png" alt="Logo" class="w-8 h-8 object-contain drop-shadow-sm">
                         </div>
                     </div>
+
                     <div>
                         <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                             Help Desk System
@@ -33,7 +37,7 @@
                         <div class="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></div>
                     </a>
 
-                    <a href="./?page=daily-work" class="nav-link group relative px-4 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:text-indigo-600 transition-all duration-200">
+                    <a href="./?page=daily-works" class="nav-link group relative px-4 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:text-indigo-600 transition-all duration-200">
                         <div class="flex items-center space-x-2">
                             <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
@@ -113,7 +117,7 @@
                 <span class="font-medium">แจ้งปัญหา/บริการ</span>
             </a>
 
-            <a href="./?page=daily-work" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
+            <a href="./?page=daily-works" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>

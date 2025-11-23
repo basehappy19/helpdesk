@@ -22,6 +22,8 @@ $ticketId         = isset($data['work_id']) ? (int)$data['work_id'] : 0;
 $toStatusId       = isset($data['to_status_id']) ? (int)$data['to_status_id'] : 0;
 $symptom          = trim($data['symptom'] ?? '');
 $cause            = trim($data['cause'] ?? '');
+$solver_by            = trim($data['solver_by'] ?? '');
+$sla            = trim($data['sla'] ?? '');
 $statusChangedRaw = trim($data['status_changed_at'] ?? '');
 
 $errors = [];
@@ -59,9 +61,9 @@ try {
 
     $sqlInsert = "
         INSERT INTO ticket_status_logs 
-            (ticket_id, from_status, to_status, symptom, cause, changed_by, changed_at)
+            (ticket_id, from_status, to_status, symptom, cause, solver_by, sla, changed_by, changed_at)
         VALUES 
-            (:ticket_id, :from_status, :to_status, :symptom, :cause, :changed_by, :changed_at)
+            (:ticket_id, :from_status, :to_status, :symptom, :cause, :solver_by, :sla, :changed_by, :changed_at)
     ";
 
     $stmt = $pdo->prepare($sqlInsert);
@@ -71,6 +73,8 @@ try {
         ':to_status'   => $toStatusId,
         ':symptom'     => $symptom,
         ':cause'     => $cause,
+        ':solver_by'     => $solver_by,
+        ':sla'     => $sla,
         ':changed_by'  => null,   
         ':changed_at'  => $changedAt,
     ]);

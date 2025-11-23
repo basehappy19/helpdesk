@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . "../../functions/status.php";
+require_once __DIR__ . "../../functions/time.php";
 
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host   = 'localhost';
@@ -22,49 +24,6 @@ if ($response !== false && $httpCode === 200) {
     }
 }
 
-function latest_status(array $ticket): ?array
-{
-    if (empty($ticket['ticket_status_logs']) || !is_array($ticket['ticket_status_logs'])) {
-        return null;
-    }
-
-    $latest = $ticket['ticket_status_logs'][0] ?? null;
-    if (!$latest) return null;
-
-    return [
-        'name'  => $latest['to_status_name'] ?? '-',
-        'style' => $latest['to_status_style'] ?? '',
-    ];
-}
-
-function diffLargestThai(string $datetime, ?DateTimeZone $tz = null): string
-{
-    $tz  = $tz ?: new DateTimeZone('Asia/Bangkok');
-    $dt  = new DateTime($datetime, $tz);
-    $now = new DateTime('now', $tz);
-
-    $diffSec = max(0, $now->getTimestamp() - $dt->getTimestamp());
-
-    if ($diffSec < 60) {
-        return 'เมื่อสักครู่';
-    }
-
-    $units = [
-        'ปี'     => 12 * 30 * 24 * 60 * 60,  // 12 เดือน
-        'เดือน'  => 30 * 24 * 60 * 60,       // 30 วัน
-        'วัน'    => 24 * 60 * 60,
-        'ชั่วโมง' => 60 * 60,
-        'นาที'   => 60,
-    ];
-
-    foreach ($units as $label => $secsPerUnit) {
-        if ($diffSec >= $secsPerUnit) {
-            $value = intdiv($diffSec, $secsPerUnit);
-            return $value . ' ' . $label . 'ที่ผ่านมา';
-        }
-    }
-    return 'เมื่อสักครู่';
-}
 ?>
 
 
@@ -81,7 +40,15 @@ function diffLargestThai(string $datetime, ?DateTimeZone $tz = null): string
 <body>
     <?php include './components/navbar.php'; ?>
     <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen py-8 px-4">
-        <div class="max-w-6xl mx-auto">
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-6">
+                <a href="./?page=home" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors mb-4">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    ย้อนกลับ
+                </a>
+            </div>
 
             <div class="bg-white md:rounded-xl shadow-sm border border-gray-100 p-8 mt-6">
                 <div class="flex items-center justify-between mb-6">
@@ -161,8 +128,8 @@ function diffLargestThai(string $datetime, ?DateTimeZone $tz = null): string
                                             <td class="px-6 py-4 text-center <?php echo htmlspecialchars($colorClass) ?>">
                                                 <span class="items-center rounded-full text-sm font-medium">
                                                     <?php echo htmlspecialchars($statusName) ?>
+                                                </span>
                                             </td>
-                                            </span>
                                             <td class="px-6 py-4 text-center">
                                                 <a href="/?page=work&id=<?= urlencode((string)($r['id'] ?? '')) ?>"
                                                     class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-150">

@@ -30,6 +30,10 @@ try {
             st.name_th      AS symptom_name,
 
             sl.id           AS status_log_id,
+            sl.symptom   AS status_symptom,
+            sl.cause   AS status_cause,
+            sl.solver_by   AS status_solver_by,
+            sl.sla   AS status_sla,
             sl.changed_at   AS status_changed_at,
             s_from.name_th  AS from_status_name,
             s_to.name_th    AS to_status_name,
@@ -80,6 +84,10 @@ try {
                 'to_status_name'     => $row['to_status_name'],
                 'status_from_style'  => $row['status_from_style'],
                 'status_to_style'    => $row['status_to_style'],
+                'symptom'    => $row['status_symptom'],
+                'cause'    => $row['status_cause'],
+                'solver_by'    => $row['status_solver_by'],
+                'sla'    => $row['status_sla'],
             ];
         }
     }

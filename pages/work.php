@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . "../../functions/status.php";
-$statues = getStatues();
+$statuses = getstatuses();
 $work = null;
 
 if (isset($_GET['id'])) {
@@ -44,16 +44,19 @@ if (isset($_GET['id'])) {
 </head>
 
 <body>
+    <?php
+    include './components/navbar.php';
+    ?>
     <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen py-8 px-4">
         <div class="max-w-5xl mx-auto">
 
             <!-- Header Section -->
             <div class="mb-6">
-                <a href="index.php" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors mb-4">
+                <a href="./?page=daily-works" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors mb-4">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                     </svg>
-                    กลับไปหน้าหลัก
+                    ย้อนกลับ
                 </a>
             </div>
 
@@ -213,7 +216,23 @@ if (isset($_GET['id'])) {
                                                                 <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                                 </svg>
-                                                                <?= htmlspecialchars($log['status_changed_at']) ?>
+                                                                <?= htmlspecialchars(formatDateThaiBuddhist($log['status_changed_at'])) ?>
+                                                            </p>
+                                                            <p class="text-xs text-gray-500 mb-2 flex items-center">
+                                                                อาการ:
+                                                                <?= htmlspecialchars($log['symptom'] ?? "-") ?>
+                                                            </p>
+                                                            <p class="text-xs text-gray-500 mb-2 flex items-center">
+                                                                สาเหตุ:
+                                                                <?= htmlspecialchars($log['cause'] ?? "-") ?>
+                                                            </p>
+                                                            <p class="text-xs text-gray-500 mb-2 flex items-center">
+                                                                ผู้แก้ไขปัญหา:
+                                                                <?= htmlspecialchars($log['solver_by'] ?? "-") ?>
+                                                            </p>
+                                                            <p class="text-xs text-gray-500 mb-2 flex items-center">
+                                                                SLA ข้อใด:
+                                                                <?= htmlspecialchars($log['sla'] ?? "-") ?>
                                                             </p>
 
                                                             <div class="flex items-center flex-wrap gap-2">
@@ -325,7 +344,7 @@ if (isset($_GET['id'])) {
 
     <?php if (isset($user)): ?>
         <!-- Add Status Modal -->
-        <div id="addStatusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div id="addStatusModal" class="fixed inset-0 backdrop-blur-md bg-white/20 hidden items-center justify-center z-50 p-4">
             <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
                 <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 rounded-t-2xl">
                     <h3 class="text-xl font-semibold text-white flex items-center">
@@ -342,19 +361,28 @@ if (isset($_GET['id'])) {
                         <label class="block text-sm font-medium text-gray-700 mb-2">สถานะใหม่</label>
                         <select name="to_status_id" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">-- เลือกสถานะ --</option>
-                            <?php foreach ($statues as $status) : ?>
-                                <option value="<?php echo $status['id']?>"><?php echo $status['name_th'] ?></option>
+                            <?php foreach ($statuses as $status) : ?>
+                                <option value="<?php echo $status['id'] ?>"><?php echo $status['name_th'] ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
                     <div>
-                        <label for="symptom" class="block text-sm font-medium text-gray-700 mb-2">อาการ</label>
-                        <input id="symptom" name="symptom" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <label for="symptom_input_add" class="block text-sm font-medium text-gray-700 mb-2">อาการ</label>
+                        <input id="symptom_input_add" name="symptom" value="" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
                     </div>
                     <div>
-                        <label for="cause" class="block text-sm font-medium text-gray-700 mb-2">สาเหตุ</label>
-                        <input id="cause" name="cause" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <label for="cause_input_add" class="block text-sm font-medium text-gray-700 mb-2">สาเหตุ</label>
+                        <input id="cause_input_add" name="cause" value="" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                    </div>
+
+                    <div>
+                        <label for="solver_by_input_add" class="block text-sm font-medium text-gray-700 mb-2">ผู้แก้ไขปัญหา</label>
+                        <input id="solver_by_input_add" name="solver_by" value="" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                    </div>
+                    <div>
+                        <label for="sla_input_add" class="block text-sm font-medium text-gray-700 mb-2">SLA ข้อใด</label>
+                        <input id="sla_input_add" name="sla" value="" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
                     </div>
 
                     <div>
@@ -375,7 +403,7 @@ if (isset($_GET['id'])) {
         </div>
 
         <!-- Edit Status Modal -->
-        <div id="editStatusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div id="editStatusModal" class="fixed inset-0 backdrop-blur-md bg-white/20 hidden items-center justify-center z-50 p-4">
             <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
                 <div class="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4 rounded-t-2xl">
                     <h3 class="text-xl font-semibold text-white flex items-center">
@@ -392,24 +420,32 @@ if (isset($_GET['id'])) {
                         <label class="block text-sm font-medium text-gray-700 mb-2">สถานะปลายทาง</label>
                         <select name="to_status_id" id="edit_to_status" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">-- เลือกสถานะ --</option>
-                            <?php foreach ($statues as $status) : ?>
-                                <option value="<?php echo $status['id']?>"><?php echo $status['name_th'] ?></option>
+                            <?php foreach ($statuses as $status) : ?>
+                                <option value="<?php echo $status['id'] ?>"><?php echo $status['name_th'] ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
                     <div>
-                        <label for="symptom" class="block text-sm font-medium text-gray-700 mb-2">อาการ</label>
-                        <input id="symptom" name="symptom" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <label for="symptom_input" class="block text-sm font-medium text-gray-700 mb-2">อาการ</label>
+                        <input id="symptom_input" name="symptom" value="" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
                     </div>
                     <div>
-                        <label for="cause" class="block text-sm font-medium text-gray-700 mb-2">สาเหตุ</label>
-                        <input id="cause" name="cause" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <label for="cause_input" class="block text-sm font-medium text-gray-700 mb-2">สาเหตุ</label>
+                        <input id="cause_input" name="cause" value="" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
                     </div>
 
                     <div>
+                        <label for="solver_by_input" class="block text-sm font-medium text-gray-700 mb-2">ผู้แก้ไขปัญหา</label>
+                        <input id="solver_by_input" name="solver_by" value="" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                    </div>
+                    <div>
+                        <label for="sla_input" class="block text-sm font-medium text-gray-700 mb-2">SLA ข้อใด</label>
+                        <input id="sla_input" name="sla" value="" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                    </div>
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">วันที่เปลี่ยนสถานะ</label>
-                        <input type="datetime-local" name="status_changed_at" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <input id="status_changed_at" type="datetime-local" name="status_changed_at" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
 
                     <div class="flex items-center space-x-3 pt-4">
@@ -425,7 +461,7 @@ if (isset($_GET['id'])) {
         </div>
 
         <!-- Delete Confirmation Modal -->
-        <div id="deleteStatusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div id="deleteStatusModal" class="fixed inset-0 backdrop-blur-md bg-white/20 hidden items-center justify-center z-50 p-4">
             <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
                 <div class="bg-gradient-to-r from-red-600 to-pink-600 px-6 py-4 rounded-t-2xl">
                     <h3 class="text-xl font-semibold text-white flex items-center">
@@ -467,19 +503,33 @@ if (isset($_GET['id'])) {
                 document.getElementById('addStatusForm').reset();
             }
 
-            // Edit Status Modal Functions
             function openEditStatusModal(log) {
                 document.getElementById('editStatusModal').classList.remove('hidden');
                 document.getElementById('editStatusModal').classList.add('flex');
 
-                // Populate form
                 document.getElementById('edit_log_id').value = log.id;
 
-                // Convert datetime to input format
-                const date = new Date(log.status_changed_at);
-                date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-                document.getElementById('edit_changed_at').value = date.toISOString().slice(0, 16);
+                document.getElementById('symptom_input').value = log.symptom ?? "";
+                document.getElementById('cause_input').value = log.cause ?? "";
+                document.getElementById('solver_by_input').value = log.solver_by ?? "";
+                document.getElementById('sla_input').value = log.sla ?? "";
+
+                const select = document.getElementById('edit_to_status');
+                const targetName = log.to_status_name;
+
+                for (let option of select.options) {
+                    if (option.text.trim() === targetName.trim()) {
+                        option.selected = true;
+                        break;
+                    }
+                }
+
+                if (log.status_changed_at) {
+                    document.getElementById('status_changed_at').value = log.status_changed_at;
+                }
+
             }
+
 
             function closeEditStatusModal() {
                 document.getElementById('editStatusModal').classList.add('hidden');
@@ -503,7 +553,7 @@ if (isset($_GET['id'])) {
                 const logId = document.getElementById('delete_log_id').value;
 
                 // TODO: Send delete request to API
-                fetch('/api/statues/delete.php', {
+                fetch('/api/statuses/delete.php', {
                         method: 'DELETE',
                         headers: {
                             'Content-Type': 'application/json',
@@ -536,7 +586,7 @@ if (isset($_GET['id'])) {
                 const data = Object.fromEntries(formData.entries());
 
                 // TODO: Send add request to API
-                fetch('/api/statues/add.php', {
+                fetch('/api/statuses/add.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -565,7 +615,7 @@ if (isset($_GET['id'])) {
                 const data = Object.fromEntries(formData.entries());
 
                 // TODO: Send update request to API
-                fetch('/api/status_logs/update.php', {
+                fetch('/api/statuses/update.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -578,6 +628,8 @@ if (isset($_GET['id'])) {
                             alert('แก้ไขสถานะสำเร็จ');
                             location.reload();
                         } else {
+                            console.error(data);
+
                             alert('เกิดข้อผิดพลาด: ' + (data.message || 'ไม่สามารถแก้ไขได้'));
                         }
                     })

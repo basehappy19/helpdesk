@@ -3,7 +3,7 @@ require_once __DIR__ . "../../functions/status.php";
 require_once __DIR__ . "../../functions/time.php";
 
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host   = 'localhost';
+$host = $_SERVER['HTTP_HOST'];
 $apiUrl = $scheme . '://' . $host . '/api/reports/get_recent_report.php';
 
 $ch = curl_init($apiUrl);

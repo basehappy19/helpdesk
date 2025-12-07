@@ -6,7 +6,7 @@ $work = null;
 if (isset($_GET['id'])) {
     $workId = $_GET['id'];
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host   = 'localhost';
+    $host = $_SERVER['HTTP_HOST'];
 
     $apiUrl = $scheme . '://' . $host . '/api/works/get_work.php?id=' . urlencode((string)$workId);
 

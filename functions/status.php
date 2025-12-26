@@ -1,6 +1,6 @@
 <?php
 
-function getstatuses()
+function getStatuses()
 {
     global $pdo;
     try {

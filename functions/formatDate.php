@@ -16,4 +16,16 @@ function formatDateThaiBuddhistWithOutTime(string $datetime, ?DateTimeZone $tz =
     return $dt->format('d/m/') . $year_th;
 }
 
+function formatDateThaiWithMonth($date)
+{
+    $months = [
+        1 => 'มกราคม', 2 => 'กุมภาพันธ์', 3 => 'มีนาคม', 4 => 'เมษายน',
+        5 => 'พฤษภาคม', 6 => 'มิถุนายน', 7 => 'กรกฎาคม', 8 => 'สิงหาคม',
+        9 => 'กันยายน', 10 => 'ตุลาคม', 11 => 'พฤศจิกายน', 12 => 'ธันวาคม'
+    ];
+    [$y, $m, $d] = explode('-', $date);
+    $y += 543;
+    return "{$d} {$months[(int)$m]} {$y}";
+}
+
 ?>

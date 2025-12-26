@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . "../../functions/status.php";
-$statuses = getstatuses();
+$statuses = getStatuses();
 $work = null;
 
 if (isset($_GET['id'])) {

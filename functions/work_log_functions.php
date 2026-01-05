@@ -1,11 +1,24 @@
 <?php
 
-function getWorkLogCategories(PDO $pdo): array {
+function getWorkLogCategories(PDO $pdo): array
+{
     $stmt = $pdo->query("SELECT * FROM work_log_categories ORDER BY id ASC");
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-function getDailyWorkLogs(PDO $pdo, string $work_date): array {
+function getDailyWorkLogsForCalendar(PDO $pdo, int $userId): array
+{
+    $stmt = $pdo->prepare("
+        SELECT id, work_date, start_time, end_time, activity_detail, category_id 
+        FROM daily_work_logs 
+        WHERE user_id = :user_id
+    ");
+    $stmt->execute([':user_id' => $userId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function getDailyWorkLogs(PDO $pdo, string $work_date): array
+{
     $stmt = $pdo->prepare("SELECT * FROM daily_work_logs WHERE work_date = :wdate");
     $stmt->execute([':wdate' => $work_date]);
     $logs = [];
@@ -15,7 +28,8 @@ function getDailyWorkLogs(PDO $pdo, string $work_date): array {
     return $logs;
 }
 
-function saveDailyWorkLogs(PDO $pdo, array $logs, array $allowedCatIds, int $userId, string $work_date): string {
+function saveDailyWorkLogs(PDO $pdo, array $logs, array $allowedCatIds, int $userId, string $work_date): string
+{
     $sqlUpsert = "
         INSERT INTO daily_work_logs (user_id, work_date, start_hour, activity_detail, category_id)
         VALUES (:user_id, :work_date, :start_hour, :activity_detail, :category_id)

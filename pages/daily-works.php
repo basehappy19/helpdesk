@@ -213,6 +213,7 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
     <script src="https://cdn.tailwindcss.com"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body {
             font-family: 'Prompt', sans-serif;
@@ -278,63 +279,83 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                             <select name="year" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer"><?php for ($i = date('Y') - 1; $i <= date('Y') + 1; $i++): ?><option value="<?= $i ?>" <?= $i == $y ? 'selected' : '' ?>><?= $i + 543 ?></option><?php endfor; ?></select>
                         </div>
                     </form>
+
+                    <button onclick="exportToPDF()" class="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 shadow-md transition-all text-sm font-semibold">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Export PDF
+                    </button>
                 </div>
 
                 <form method="post">
                     <input type="hidden" name="work_date" value="<?php echo htmlspecialchars($selected_date); ?>">
                     <input type="hidden" name="save_log_table" value="1">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-600 text-sm border-b">
-                                    <th class="px-6 py-4 w-24">เวลา</th>
-                                    <th class="px-6 py-4">รายละเอียด</th><?php if ($isLoggedIn): ?><th class="px-6 py-4 w-64">หมวดหมู่</th><?php endif; ?>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                <?php for ($h = 8; $h <= 16; $h++): $logsInHour = $existing_logs[$h] ?? []; ?>
-                                    <tr class="hover:bg-slate-50">
-                                        <td class="px-6 py-3 align-top"><span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold"><?= sprintf("%02d:00", $h) ?></span></td>
 
-                                        <?php if (!$isLoggedIn): ?>
-                                            <td class="px-6 py-3 align-top" colspan="2">
-                                                <?php if (empty($logsInHour)): ?><span class="text-slate-300 text-sm italic">- ว่าง -</span><?php else: ?>
-                                                    <div class="flex flex-col gap-2">
-                                                        <?php $i = 1;
-                                                                                                                                            foreach ($logsInHour as $entry): ?>
-                                                            <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:border-indigo-300 transition-colors h-auto min-h-[80px]">
-                                                                <div class="flex items-center justify-between mb-2">
-                                                                    <div class="flex items-center gap-2">
-                                                                        <span class="bg-slate-100 text-slate-500 text-[10px] font-bold px-1.5 py-0.5 rounded">#<?= $i ?></span>
-                                                                        <div class="flex items-center gap-1 text-xs text-slate-500 font-semibold">
-                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                                                            </svg>
-                                                                            <?= htmlspecialchars($entry['display_th']) ?>
-                                                                        </div>
-                                                                    </div>
-                                                                    <?php if (!empty($entry['category_name'])): ?><span class="bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-md text-[10px] font-medium"><?= htmlspecialchars($entry['category_name']) ?></span><?php endif; ?>
-                                                                </div>
-                                                                <p class="text-sm text-slate-700 break-words whitespace-pre-wrap leading-relaxed pl-1"><?= htmlspecialchars($entry['activity_detail']) ?></p>
-                                                            </div>
-                                                        <?php $i++;
-                                                                                                                                            endforeach; ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </td>
-                                        <?php else: ?>
-                                            <?php $myLog = $logsInHour[0] ?? []; ?>
-                                            <td class="px-6 py-3 align-top"><input type="text" name="logs[<?= $h ?>][activity]" value="<?= htmlspecialchars($myLog['activity_detail'] ?? '') ?>" class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none"></td>
-                                            <td class="px-6 py-3 align-top"><select name="logs[<?= $h ?>][category_id]" class="w-full border p-2 rounded">
-                                                    <option value="">--</option><?php foreach ($categories as $cat): ?><option value="<?= $cat['id'] ?>" <?= (($myLog['category_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>><?= $cat['name_th'] ?></option><?php endforeach; ?>
-                                                </select></td>
-                                        <?php endif; ?>
+                    <div id="printable-area" class="p-4 bg-white">
+
+                        <div id="pdf-header" class="hidden mb-4 text-center">
+                            <h2 class="text-xl font-bold text-slate-800">รายงานภาระงานประจำวัน</h2>
+                            <p class="text-slate-600">วันที่: <?= date('d/m/Y', strtotime($selected_date)) ?></p>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-700 text-sm border-b-2 border-slate-200">
+                                        <th class="px-4 py-3 w-24 border">เวลา</th>
+                                        <th class="px-4 py-3 border">รายละเอียด</th>
+                                        <?php if ($isLoggedIn): ?><th class="px-4 py-3 w-64 border">หมวดหมู่</th><?php endif; ?>
                                     </tr>
-                                <?php endfor; ?>
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <?php for ($h = 8; $h <= 16; $h++): $logsInHour = $existing_logs[$h] ?? []; ?>
+                                        <tr class="border-b">
+                                            <td class="px-4 py-3 align-top border bg-slate-50 font-bold text-slate-600 text-center"><?= sprintf("%02d:00", $h) ?></td>
+
+                                            <?php if (!$isLoggedIn): ?>
+                                                <td class="px-4 py-3 align-top border" colspan="2">
+                                                    <?php if (empty($logsInHour)): ?><span class="text-slate-300 text-sm italic">- ว่าง -</span><?php else: ?>
+                                                        <div class="flex flex-col gap-2">
+                                                            <?php $i = 1;
+                                                                                                                                                foreach ($logsInHour as $entry): ?>
+                                                                <div class="text-sm">
+                                                                    <div class="font-semibold text-indigo-700 mb-1">
+                                                                        #<?= $i ?> <?= htmlspecialchars($entry['display_th']) ?>
+                                                                        <?php if (!empty($entry['category_name'])): ?>
+                                                                            <span class="ml-2 text-[10px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-600"><?= htmlspecialchars($entry['category_name']) ?></span>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                    <div class="pl-4 text-slate-700 whitespace-pre-wrap break-words"><?= htmlspecialchars($entry['activity_detail']) ?></div>
+                                                                </div>
+                                                            <?php $i++;
+                                                                                                                                                endforeach; ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </td>
+                                            <?php else: ?>
+                                                <?php $myLog = $logsInHour[0] ?? []; ?>
+                                                <td class="px-4 py-3 align-top border">
+                                                    <textarea name="logs[<?= $h ?>][activity]" class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none text-sm resize-none" rows="2"><?= htmlspecialchars($myLog['activity_detail'] ?? '') ?></textarea>
+                                                </td>
+                                                <td class="px-4 py-3 align-top border">
+                                                    <select name="logs[<?= $h ?>][category_id]" class="w-full border p-2 rounded text-sm">
+                                                        <option value="">--</option><?php foreach ($categories as $cat): ?><option value="<?= $cat['id'] ?>" <?= (($myLog['category_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>><?= $cat['name_th'] ?></option><?php endforeach; ?>
+                                                    </select>
+                                                </td>
+                                            <?php endif; ?>
+                                        </tr>
+                                    <?php endfor; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <?php if ($canEdit): ?><div class="px-6 py-4 border-t flex justify-end"><button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 shadow-md transition-all">บันทึกข้อมูล</button></div><?php endif; ?>
+
+                    <?php if ($canEdit): ?>
+                        <div class="px-6 py-4 border-t flex justify-end bg-slate-50">
+                            <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 shadow-md transition-all">บันทึกข้อมูล</button>
+                        </div>
+                    <?php endif; ?>
                 </form>
             </div>
         </div>
@@ -439,6 +460,38 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
         const calendarEvents = <?= json_encode($calendar_events) ?>;
         let calendar = null;
 
+        function exportToPDF() {
+            const element = document.getElementById('printable-area');
+            const header = document.getElementById('pdf-header');
+
+            header.classList.remove('hidden');
+
+            const opt = {
+                margin: [10, 10, 10, 10],
+                filename: 'WorkLog_<?= $selected_date ?>.pdf',
+                image: {
+                    type: 'jpeg',
+                    quality: 0.98
+                },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true
+                }, // scale 2 เพื่อให้ภาพชัด
+                jsPDF: {
+                    unit: 'mm',
+                    format: 'a4',
+                    orientation: 'portrait'
+                }
+            };
+
+            // 4. สั่งสร้าง PDF
+            html2pdf().set(opt).from(element).save().then(() => {
+                // 5. ซ่อนหัวกระดาษกลับเหมือนเดิมเมื่อเสร็จ
+                header.classList.add('hidden');
+            });
+        }
+
+
         function switchView(viewName) {
             const tableView = document.getElementById('view-table');
             const calView = document.getElementById('view-calendar');
@@ -478,7 +531,6 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
             }
         <?php endif; ?>
 
-        // ฟังก์ชันปิด Modal รายละเอียด
         function closeDetailModal() {
             document.getElementById('eventDetailModal').classList.add('hidden');
         }

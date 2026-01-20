@@ -288,47 +288,80 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                             <thead>
                                 <tr class="bg-slate-50 text-slate-600 text-sm border-b">
                                     <th class="px-6 py-4 w-24">เวลา</th>
-                                    <th class="px-6 py-4">รายละเอียด</th><?php if ($isLoggedIn): ?><th class="px-6 py-4 w-64">หมวดหมู่</th><?php endif; ?>
+                                    <th class="px-6 py-4">รายละเอียด</th>
+                                    <th class="px-6 py-4 w-64">หมวดหมู่</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 <?php for ($h = 8; $h <= 16; $h++): $logsInHour = $existing_logs[$h] ?? []; ?>
                                     <tr class="hover:bg-slate-50">
-                                        <td class="px-6 py-3 align-top"><span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold"><?= sprintf("%02d:00", $h) ?></span></td>
+                                        <td class="px-6 py-3 align-top">
+                                            <span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold"><?= sprintf("%02d:00", $h) ?></span>
+                                        </td>
 
-                                        <?php if (!$isLoggedIn): ?>
-                                            <td class="px-6 py-3 align-top" colspan="2">
-                                                <?php if (empty($logsInHour)): ?><span class="text-slate-300 text-sm italic">- ว่าง -</span><?php else: ?>
-                                                    <div class="flex flex-col gap-2">
+                                        <td class="px-6 py-3 align-top">
+                                            <?php if ($isLoggedIn): ?>
+                                                <?php $myLog = $logsInHour[0] ?? []; ?>
+                                                <input type="text" name="logs[<?= $h ?>][activity]" value="<?= htmlspecialchars($myLog['activity_detail'] ?? '') ?>" class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                                            <?php else: ?>
+                                                <?php if (empty($logsInHour)): ?>
+                                                    <span class="text-slate-300 text-sm italic">- ว่าง -</span>
+                                                <?php else: ?>
+                                                    <div class="flex flex-col gap-3">
                                                         <?php $i = 1;
-                                                                                                                                            foreach ($logsInHour as $entry): ?>
-                                                            <div class="bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:border-indigo-300 transition-colors h-auto min-h-[80px]">
-                                                                <div class="flex items-center justify-between mb-2">
-                                                                    <div class="flex items-center gap-2">
-                                                                        <span class="bg-slate-100 text-slate-500 text-[10px] font-bold px-1.5 py-0.5 rounded">#<?= $i ?></span>
-                                                                        <div class="flex items-center gap-1 text-xs text-slate-500 font-semibold">
-                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                                                            </svg>
-                                                                            <?= htmlspecialchars($entry['display_th']) ?>
-                                                                        </div>
+                                                        foreach ($logsInHour as $entry): ?>
+                                                            <div class="pb-3 border-b border-slate-300 last:border-0 last:pb-0">
+                                                                <div class="flex items-center gap-2 mb-1">
+                                                                    <span class="bg-slate-100 text-slate-500 text-[10px] font-bold px-1.5 py-0.5 rounded">#<?= $i ?></span>
+                                                                    <div class="flex items-center gap-1 text-xs text-slate-500 font-semibold">
+                                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                                                        </svg>
+                                                                        <?= htmlspecialchars($entry['display_th']) ?>
                                                                     </div>
-                                                                    <?php if (!empty($entry['category_name'])): ?><span class="bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-md text-[10px] font-medium"><?= htmlspecialchars($entry['category_name']) ?></span><?php endif; ?>
                                                                 </div>
-                                                                <p class="text-sm text-slate-700 break-words whitespace-pre-wrap leading-relaxed pl-1"><?= htmlspecialchars($entry['activity_detail']) ?></p>
+                                                                <p class="text-sm text-slate-700 break-words leading-relaxed pl-1">
+                                                                    <?= htmlspecialchars($entry['activity_detail']) ?>
+                                                                </p>
                                                             </div>
                                                         <?php $i++;
-                                                                                                                                            endforeach; ?>
+                                                        endforeach; ?>
                                                     </div>
                                                 <?php endif; ?>
-                                            </td>
-                                        <?php else: ?>
-                                            <?php $myLog = $logsInHour[0] ?? []; ?>
-                                            <td class="px-6 py-3 align-top"><input type="text" name="logs[<?= $h ?>][activity]" value="<?= htmlspecialchars($myLog['activity_detail'] ?? '') ?>" class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none"></td>
-                                            <td class="px-6 py-3 align-top"><select name="logs[<?= $h ?>][category_id]" class="w-full border p-2 rounded">
-                                                    <option value="">--</option><?php foreach ($categories as $cat): ?><option value="<?= $cat['id'] ?>" <?= (($myLog['category_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>><?= $cat['name_th'] ?></option><?php endforeach; ?>
-                                                </select></td>
-                                        <?php endif; ?>
+                                            <?php endif; ?>
+                                        </td>
+
+                                        <td class="px-6 py-3 align-top">
+                                            <?php if ($isLoggedIn): ?>
+                                                <?php $myLog = $logsInHour[0] ?? []; ?>
+                                                <select name="logs[<?= $h ?>][category_id]" class="w-full border p-2 rounded">
+                                                    <option value="">--</option>
+                                                    <?php foreach ($categories as $cat): ?>
+                                                        <option value="<?= $cat['id'] ?>" <?= (($myLog['category_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>>
+                                                            <?= $cat['name_th'] ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            <?php else: ?>
+                                                <?php if (!empty($logsInHour)): ?>
+                                                    <div class="flex flex-col gap-3">
+                                                        <?php foreach ($logsInHour as $entry): ?>
+                                                            <div class="h-full flex items-start pb-3 border-b border-transparent last:pb-0">
+                                                                <?php if (!empty($entry['category_name'])): ?>
+                                                                    <span class="bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap">
+                                                                        <?= htmlspecialchars($entry['category_name']) ?>
+                                                                    </span>
+                                                                <?php else: ?>
+                                                                    <span class="text-slate-300 text-xs italic">-</span>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <span class="text-slate-300 text-sm italic">-</span>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                 <?php endfor; ?>
                             </tbody>

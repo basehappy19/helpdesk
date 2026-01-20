@@ -165,7 +165,7 @@ if (isset($pdo)) {
 
         if ($startT) {
             $creatorName = !empty($log['display_th']) ? $log['display_th'] : 'User #' . $log['user_id'];
-            $displayTitle = "[$creatorName] " . $log['activity_detail'];
+            $displayTitle = $log['activity_detail'] . " [$creatorName]";
 
             // ✅ 2. คำนวณสีตาม User ID (Logic ที่ขอมา)
             // เอา user_id มาแปลงเป็นตัวเลข (int)

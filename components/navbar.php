@@ -53,8 +53,8 @@
             <div class="flex items-center space-x-4">
                 <?php if (isset($user)) : ?>
                     <!-- User Profile Section -->
-                    <div class="hidden md:flex items-center space-x-3 bg-gray-100 rounded-xl px-4 py-2.5">
-                        <div class="w-9 h-9 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+                    <div class="hidden md:flex items-center space-x-3 rounded-xl px-4 py-2.5">
+                        <div class="w-9 h-9 bg-indigo-500 rounded-full flex items-center justify-center">
                             <span class="text-white font-semibold text-sm">
                                 <?php echo strtoupper(substr($user['username'], 0, 2)); ?>
                             </span>
@@ -66,7 +66,7 @@
                     </div>
 
                     <!-- Logout Button -->
-                    <a href="./?page=logout" class="group relative inline-flex items-center space-x-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/40 hover:scale-105 transition-all duration-200">
+                    <a href="./?page=logout" class="group relative inline-flex items-center space-x-2 bg-red-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-lg shadow-red-500/30 transition-all duration-200">
                         <svg class="w-4 h-4 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>
@@ -74,7 +74,7 @@
                     </a>
                 <?php else: ?>
                     <!-- Login Button -->
-                    <a href="./?page=login" class="group relative inline-flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-105 transition-all duration-200">
+                    <a href="./?page=login" class="group relative inline-flex items-center space-x-2 bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium shadow-lg shadow-indigo-500/30 transition-all duration-200">
                         <svg class="w-4 h-4 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                         </svg>
@@ -98,7 +98,7 @@
             <?php if (isset($user)) : ?>
                 <!-- Mobile User Info -->
                 <div class="flex items-center space-x-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl px-4 py-3 mb-3 border border-indigo-100">
-                    <div class="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+                    <div class="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center">
                         <span class="text-white font-semibold">
                             <?php echo strtoupper(substr($user['username'], 0, 2)); ?>
                         </span>
@@ -125,7 +125,7 @@
             </a>
 
             <?php if (!isset($user)) : ?>
-                <a href="./?page=login" class="flex items-center justify-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 rounded-xl font-medium shadow-lg mt-3">
+                <a href="./?page=login" class="flex items-center justify-center space-x-2 bg-indigo-600 text-white px-4 py-3 rounded-xl font-medium shadow-lg mt-3">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                     </svg>

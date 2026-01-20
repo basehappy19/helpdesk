@@ -1,65 +1,189 @@
 <?php
-require_once __DIR__ . "../../functions/work_log_functions.php";
+date_default_timezone_set('Asia/Bangkok');
+
 global $pdo;
 
-$isLoggedIn = isset($user) && isset($user['id']);
-$categories = getWorkLogCategories($pdo);
+/* ====== SETUP & INIT ====== */
+$y = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+$m = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
+$d = isset($_GET['day']) ? (int)$_GET['day'] : (int)date('d');
 
-$events = [];
-if ($isLoggedIn) {
-    $raw_logs = getDailyWorkLogsForCalendar($pdo, $user['id']);
-    foreach ($raw_logs as $log) {
-        $events[] = [
-            'id' => $log['id'],
-            'title' => $log['activity_detail'],
-            'start' => $log['work_date'] . 'T' . $log['start_time'],
-            'end' => $log['work_date'] . 'T' . $log['end_time'],
-            'backgroundColor' => '#6366f1',
-            'borderColor' => '#4f46e5',
-            'extendedProps' => [
-                'category_id' => $log['category_id']
-            ]
-        ];
+if (!checkdate($m, $d, $y)) {
+    $y = (int)date('Y');
+    $m = (int)date('m');
+    $d = (int)date('d');
+}
+
+$selected_date = sprintf('%04d-%02d-%02d', $y, $m, $d);
+$message = '';
+
+$isLoggedIn = isset($user) && isset($user['id']);
+$isToday = ($selected_date === date('Y-m-d'));
+$canEdit = $isLoggedIn && $isToday;
+
+/* ====== LOAD CATEGORIES ====== */
+$categories = [];
+try {
+    if (isset($pdo)) {
+        $stmt_cat = $pdo->query("SELECT * FROM work_log_categories ORDER BY id ASC");
+        $categories = $stmt_cat->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {
+}
+$allowedCatIds = array_flip(array_map(fn($c) => (string)$c['id'], $categories));
+
+
+/* ==========================================
+   PART 1: HANDLE FORM SUBMISSIONS
+   ========================================== */
+// (ส่วน Logic การบันทึกคงเดิม แต่เพิ่มการเช็ค isLoggedIn ให้รัดกุม)
+
+// 1.1 SAVE FROM TABLE VIEW (แบบรายชั่วโมง)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
+    if (!$canEdit) {
+        $message = '❌ ไม่สามารถแก้ไขข้อมูลย้อนหลัง หรือยังไม่ได้เข้าสู่ระบบ';
+    } else {
+        $work_date = $_POST['work_date'] ?? $selected_date;
+        $logs = $_POST['logs'] ?? [];
+
+        try {
+            if (isset($pdo)) {
+                $stmtCheck = $pdo->prepare("SELECT id FROM daily_work_logs WHERE user_id = :uid AND work_date = :wdate AND start_hour = :sh");
+                
+                $stmtInsert = $pdo->prepare("INSERT INTO daily_work_logs (user_id, work_date, start_time, end_time, activity_detail, category_id) VALUES (:uid, :wdate, :stime, :etime, :detail, :catid)");
+                
+                $stmtUpdate = $pdo->prepare("UPDATE daily_work_logs SET activity_detail = :detail, category_id = :catid, updated_at = NOW() WHERE id = :id");
+                
+                $stmtDelete = $pdo->prepare("DELETE FROM daily_work_logs WHERE id = :id");
+
+                $pdo->beginTransaction();
+                $count_saved = 0;
+
+                for ($h = 8; $h <= 16; $h++) {
+                    $activity = trim($logs[$h]['activity'] ?? '');
+                    $category_id = $logs[$h]['category_id'] ?? '';
+                    $cat_db = ($category_id !== '' && isset($allowedCatIds[(string)$category_id])) ? (int)$category_id : null;
+
+                    $stmtCheck->execute([':uid' => $user['id'], ':wdate' => $work_date, ':sh' => $h]);
+                    $existingRow = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+                    if ($existingRow) {
+                        if ($activity === '') {
+                            $stmtDelete->execute([':id' => $existingRow['id']]);
+                        } else {
+                            $stmtUpdate->execute([
+                                ':detail' => $activity,
+                                ':catid'  => $cat_db,
+                                ':id'     => $existingRow['id']
+                            ]);
+                            $count_saved++;
+                        }
+                    } else {
+                        if ($activity !== '') {
+                            $startTimeStr = sprintf("%02d:00:00", $h);
+                            $endTimeStr   = sprintf("%02d:00:00", $h + 1);
+
+                            $stmtInsert->execute([
+                                ':uid'    => $user['id'],
+                                ':wdate'  => $work_date,
+                                ':stime'  => $startTimeStr,
+                                ':etime'  => $endTimeStr,
+                                ':detail' => $activity,
+                                ':catid'  => $cat_db
+                            ]);
+                            $count_saved++;
+                        }
+                    }
+                }
+
+                $pdo->commit();
+                $message = "✅ บันทึกข้อมูลสำเร็จ";
+            }
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            $message = "เกิดข้อผิดพลาด: " . htmlspecialchars($e->getMessage());
+        }
     }
 }
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_save'])) {
-    if (!$isLoggedIn) {
-        die("กรุณาเข้าสู่ระบบ");
-    }
 
-    $user_id = $_SESSION['user']['id'];
-    $work_date = $_POST['work_date'];
-    $start_time = $_POST['start_time'];
-    $end_time = $_POST['end_time'];
-    $start_hour = (int) explode(':', $start_time)[0];
-    $activity_detail = trim($_POST['activity_detail']);
-    $category_id = $_POST['category_id'] ?? null;
-    $category_id = ($category_id === '' ? null : $category_id);
+// 1.2 SAVE FROM CALENDAR MODAL (แบบระบุเวลา)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_calendar'])) {
+    if (!$isLoggedIn) die("Access Denied");
+
+    $c_date = $_POST['work_date'];
+    $c_start = $_POST['start_time'];
+    $c_end = $_POST['end_time'];
+    $c_detail = trim($_POST['activity_detail']);
+    $c_cat = $_POST['category_id'] ?: null;
 
     try {
-        $sql = "INSERT INTO daily_work_logs
-(user_id, work_date, start_time, end_time, activity_detail, category_id)
-VALUES
-(:uid, :wdate, :stime, :etime, :detail, :catid)";
+        if (isset($pdo)) {
+            $sql = "INSERT INTO daily_work_logs 
+                    (user_id, work_date, start_time, end_time, activity_detail, category_id)
+                    VALUES (:uid, :wdate, :stime, :etime, :detail, :catid)";
 
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':uid'    => $user_id,
-            ':wdate'  => $work_date,
-            ':stime'  => $start_time,
-            ':etime'  => $end_time,
-            ':detail' => $activity_detail,
-            ':catid'  => $category_id
-        ]);
+            $stmt = $pdo->prepare($sql);
 
+            $stmt->execute([
+                ':uid' => $user['id'],
+                ':wdate' => $c_date,
+                ':stime' => $c_start,
+                ':etime' => $c_end,
+                ':detail' => $c_detail,
+                ':catid' => $c_cat
+            ]);
 
-        header("Location: ./?page=daily-works");
-        exit;
+            header("Location: ?page=daily-works&view=calendar&msg=saved");
+            exit;
+        }
     } catch (PDOException $e) {
-        die("Error: " . $e->getMessage());
+        echo "Error: " . $e->getMessage();
+        exit;
     }
 }
 
+/* ==========================================
+   PART 2: DATA FETCHING
+   ========================================== */
+$existing_logs = [];
+$calendar_events = [];
+
+if ($isLoggedIn && isset($pdo)) {
+    // Table Data
+    $stmt_log = $pdo->prepare("SELECT * FROM daily_work_logs WHERE user_id = :uid AND work_date = :wdate");
+    $stmt_log->execute([':uid' => $user['id'], ':wdate' => $selected_date]);
+    foreach ($stmt_log->fetchAll(PDO::FETCH_ASSOC) as $log) {
+        if (!empty($log['start_hour'])) {
+            $existing_logs[(int)$log['start_hour']] = $log;
+        } else if (!empty($log['start_time'])) {
+            $h = (int)explode(':', $log['start_time'])[0];
+            $existing_logs[$h] = $log;
+        }
+    }
+
+    // Calendar Data
+    $stmt_cal = $pdo->prepare("SELECT * FROM daily_work_logs WHERE user_id = :uid");
+    $stmt_cal->execute([':uid' => $user['id']]);
+    foreach ($stmt_cal->fetchAll(PDO::FETCH_ASSOC) as $log) {
+        $startT = $log['start_time'];
+        $endT = $log['end_time'];
+        if (empty($startT) && !empty($log['start_hour'])) {
+            $startT = sprintf("%02d:00:00", $log['start_hour']);
+            $endT   = sprintf("%02d:00:00", $log['start_hour'] + 1);
+        }
+        if ($startT) {
+            $calendar_events[] = [
+                'id' => $log['id'],
+                'title' => $log['activity_detail'],
+                'start' => $log['work_date'] . 'T' . $startT,
+                'end' => $log['work_date'] . 'T' . $endT,
+                'backgroundColor' => '#4f46e5'
+            ];
+        }
+    }
+}
+
+if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันทึกข้อมูลเรียบร้อยแล้ว";
 ?>
 
 <!DOCTYPE html>
@@ -68,544 +192,275 @@ VALUES
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>บันทึกงานประจำวัน - Helpdesk</title>
+    <title>บันทึกภาระงานประจำวัน</title>
 
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
-
-        * {
-            font-family: 'Prompt', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-
-        :root {
-            --fc-today-bg-color: rgba(99, 102, 241, 0.08);
-            --fc-border-color: #e5e7eb;
-        }
-
         body {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e0e7ff 100%);
+            font-family: 'Prompt', sans-serif;
         }
 
-        /* Modern Calendar Buttons */
-        .fc .fc-button-primary {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            border: none;
-            font-weight: 600;
-            padding: 10px 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-transform: none;
-            letter-spacing: 0.025em;
+        .fade-enter-active {
+            transition: opacity 0.3s ease-out;
         }
 
-        .fc .fc-button-primary:hover {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
-            transform: translateY(-2px);
+        /* ✅ FIX 2: ปรับ CSS FullCalendar ให้ไม่บัง Modal และแสดงผลถูกต้อง */
+        .fc {
+            z-index: 1;
         }
 
-        .fc .fc-button-primary:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-        }
-
-        .fc .fc-button-primary:disabled {
-            opacity: 0.4;
-            transform: none;
-        }
-
-        .fc .fc-button-active {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
-            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4) !important;
-        }
-
-        /* Modern Toolbar */
-        .fc .fc-toolbar-title {
-            font-size: 1.75rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: -0.025em;
-        }
-
-        /* Modern Day Cells */
-        .fc-daygrid-day {
+        .fc-event {
             cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .fc-daygrid-day::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .fc-daygrid-day:hover::before {
-            opacity: 1;
-        }
-
-        .fc-daygrid-day:hover {
-            transform: scale(1.02);
-            z-index: 10;
-        }
-
-        .fc-daygrid-day-number {
-            padding: 10px;
-            font-weight: 600;
-            color: #64748b;
-            transition: all 0.3s ease;
         }
 
         .fc-day-today {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%) !important;
-            border: 2px solid #6366f1 !important;
-        }
-
-        .fc-day-today .fc-daygrid-day-number {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 6px;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-            font-weight: 700;
-        }
-
-        /* Modern Events */
-        .fc-event {
-            border-radius: 8px;
-            padding: 4px 8px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            border: none;
-            margin-bottom: 3px;
-            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
-            transition: all 0.2s ease;
-            color: white;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-        }
-
-        .fc-event:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
-        }
-
-        .fc-event-title {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        /* Modern Header */
-        .fc .fc-col-header-cell {
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-            font-weight: 700;
-            color: #475569;
-            border-color: #e5e7eb;
-            padding: 16px 8px;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-        }
-
-        .fc-daygrid-day-frame {
-            min-height: 120px;
-        }
-
-        /* Glassmorphism Effect */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-
-        /* Modern Modal Animation */
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: scale(0.95) translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        .modal-content {
-            animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Input Focus Effects */
-        .modern-input:focus {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
-        }
-
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            .fc .fc-toolbar {
-                flex-direction: column;
-                gap: 12px;
-            }
-
-            .fc .fc-toolbar-title {
-                font-size: 1.35rem;
-            }
-
-            .fc-daygrid-day-frame {
-                min-height: 80px;
-            }
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            background-color: rgba(99, 102, 241, 0.1) !important;
         }
     </style>
 </head>
 
-<body class="min-h-screen text-slate-800">
+<body class="bg-slate-50 min-h-screen text-slate-800">
 
     <?php include './components/navbar.php'; ?>
 
-    <div class="max-w-7xl mx-auto py-8 px-4">
-        <!-- Modern Header -->
-        <div class="mb-10 text-center">
-            <div class="flex flex-col items-center">
-                <div class="inline-flex items-center gap-3 mb-4">
-                    <h1 class="text-4xl font-extrabold bg-gradient-to-r text-indigo-600">
-                        บันทึกภาระงานประจำวัน
-                    </h1>
-                </div>
+    <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
 
-                <?php if (!$isLoggedIn): ?>
-                    <div class="inline-flex items-center gap-2 bg-red-50 text-red-600 px-6 py-3 rounded-2xl text-sm font-semibold border-2 border-red-200 shadow-lg">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                        </svg>
-                        กรุณาเข้าสู่ระบบเพื่อบันทึกงาน
-                    </div>
-                <?php endif; ?>
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-slate-900 mb-2">📝 บันทึกภาระงานประจำวัน</h1>
+
+            <?php if ($message): ?>
+                <div class="mt-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded shadow-sm">
+                    <?php echo $message; ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!$isLoggedIn): ?>
+                <div class="mt-4 p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-700 rounded shadow-sm">
+                    ⚠️ กรุณาเข้าสู่ระบบเพื่อเพิ่มหรือแก้ไขข้อมูล
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="flex justify-center mb-8">
+            <div class="bg-white p-1 rounded-xl shadow-sm border border-slate-200 inline-flex">
+                <button onclick="switchView('table')" id="btn-view-table" class="px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 bg-indigo-600 text-white shadow-md">
+                    มุมมองตาราง
+                </button>
+                <button onclick="switchView('calendar')" id="btn-view-calendar" class="px-6 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-all duration-200 flex items-center gap-2">
+                    มุมมองปฏิทิน
+                </button>
             </div>
         </div>
 
-        <!-- Modern Calendar Card -->
-        <div class="glass-card p-8 rounded-3xl shadow-2xl">
-            <div id='calendar'></div>
+        <div id="view-table" class="fade-enter-active">
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+                <div class="px-6 py-5 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between">
+                    <form method="get" class="flex items-center gap-3 flex-wrap">
+                        <input type="hidden" name="page" value="daily-works">
+                        <input type="hidden" name="view" value="table">
+                        <div class="flex items-center bg-white border border-slate-300 rounded-lg px-3 py-2 shadow-sm">
+                            <select name="day" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer">
+                                <?php for ($i = 1; $i <= 31; $i++): ?><option value="<?= $i ?>" <?= $i == $d ? 'selected' : '' ?>><?= $i ?></option><?php endfor; ?>
+                            </select>
+                            <span class="mx-1">/</span>
+                            <select name="month" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer">
+                                <?php $ms = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                                foreach ($ms as $i => $n): ?><option value="<?= $i + 1 ?>" <?= $i + 1 == $m ? 'selected' : '' ?>><?= $n ?></option><?php endforeach; ?>
+                            </select>
+                            <span class="mx-1">/</span>
+                            <select name="year" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer">
+                                <?php for ($i = date('Y') - 1; $i <= date('Y') + 1; $i++): ?><option value="<?= $i ?>" <?= $i == $y ? 'selected' : '' ?>><?= $i + 543 ?></option><?php endfor; ?>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+
+                <form method="post">
+                    <input type="hidden" name="work_date" value="<?php echo htmlspecialchars($selected_date); ?>">
+                    <input type="hidden" name="save_log_table" value="1">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-600 text-sm border-b">
+                                    <th class="px-6 py-4">เวลา</th>
+                                    <th class="px-6 py-4">กิจกรรม</th>
+                                    <th class="px-6 py-4">หมวดหมู่</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <?php for ($h = 8; $h <= 16; $h++): $log = $existing_logs[$h] ?? []; ?>
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="px-6 py-3"><span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold"><?= sprintf("%02d:00", $h) ?></span></td>
+                                        <td class="px-6 py-3"><input type="text" name="logs[<?= $h ?>][activity]" value="<?= htmlspecialchars($log['activity_detail'] ?? '') ?>" class="w-full border p-2 rounded" <?= $canEdit ? '' : 'readonly' ?>></td>
+                                        <td class="px-6 py-3">
+                                            <select name="logs[<?= $h ?>][category_id]" class="w-full border p-2 rounded" <?= $canEdit ? '' : 'disabled' ?>>
+                                                <option value="">--</option>
+                                                <?php foreach ($categories as $cat): ?>
+                                                    <option value="<?= $cat['id'] ?>" <?= (($log['category_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>><?= $cat['name_th'] ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                <?php endfor; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php if ($canEdit): ?>
+                        <div class="px-6 py-4 border-t flex justify-end">
+                            <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">บันทึกข้อมูล</button>
+                        </div>
+                    <?php endif; ?>
+                </form>
+            </div>
+        </div>
+
+        <div id="view-calendar" class="hidden fade-enter-active">
+            <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
+                <div id='calendar'></div>
+            </div>
         </div>
     </div>
 
-    <!-- Modern Modal -->
-    <div id="eventModal" class="hidden fixed inset-0 bg-gradient-to-br from-slate-900/70 via-purple-900/30 to-slate-900/70 backdrop-blur-xl z-50 flex items-center justify-center p-4">
-        <div class="modal-content glass-card rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden border border-white/20">
-            <!-- Modal Header -->
-            <div class="relative bg-indigo-600 px-8 py-6">
-                <div class="absolute inset-0 bg-black/10"></div>
-                <div class="relative flex justify-between items-center">
-                    <div>
-                        <h3 class="text-white font-bold text-2xl mb-1">เพิ่มกิจกรรมใหม่</h3>
-                        <p class="text-indigo-100 text-sm font-medium" id="modal_date_display"></p>
-                    </div>
-                    <button onclick="closeModal()" class="text-white/80 hover:text-white text-4xl leading-none transition-all hover:rotate-90 duration-300">
-                        ×
-                    </button>
+    <div id="calendarModal" class="hidden fixed inset-0 z-[9999] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeModal()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full z-[10000]">
+                <div class="bg-indigo-600 px-4 py-4 sm:px-6">
+                    <h3 class="text-lg leading-6 font-bold text-white">📅 เพิ่มกิจกรรมใหม่</h3>
+                    <p class="text-indigo-200 text-sm mt-1" id="modal_date_display">...</p>
                 </div>
+
+                <form action="" method="POST" class="p-6">
+                    <input type="hidden" name="save_log_calendar" value="1">
+                    <input type="hidden" name="work_date" id="m_work_date">
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div><label class="block text-sm font-medium mb-1">เวลาเริ่ม</label><input type="time" name="start_time" id="m_start_time" required class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-sm font-medium mb-1">เวลาสิ้นสุด</label><input type="time" name="end_time" id="m_end_time" required class="w-full border p-2 rounded"></div>
+                    </div>
+                    <div class="mb-4"><label class="block text-sm font-medium mb-1">รายละเอียด</label><textarea name="activity_detail" rows="3" required class="w-full border p-2 rounded"></textarea></div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium mb-1">หมวดหมู่</label>
+                        <select name="category_id" class="w-full border p-2 rounded">
+                            <option value="">-- เลือก --</option>
+                            <?php foreach ($categories as $cat): ?><option value="<?= $cat['id'] ?>"><?= $cat['name_th'] ?></option><?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-4 border-t">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-100 rounded">ยกเลิก</button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded shadow">บันทึก</button>
+                    </div>
+                </form>
             </div>
-
-            <!-- Modal Body -->
-            <form action="" method="POST" class="p-8 space-y-6">
-                <input type="hidden" name="work_date" id="m_work_date">
-
-                <!-- Time Inputs -->
-                <div class="grid grid-cols-2 gap-5">
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-2 text-sm font-bold text-slate-700">
-                            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            เวลาเริ่ม
-                        </label>
-                        <input type="time" name="start_time" id="m_start_time" required
-                            class="modern-input w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-semibold text-slate-700">
-                    </div>
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-2 text-sm font-bold text-slate-700">
-                            <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            เวลาสิ้นสุด
-                        </label>
-                        <input type="time" name="end_time" id="m_end_time" required
-                            class="modern-input w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all font-semibold text-slate-700">
-                    </div>
-                </div>
-
-                <!-- Activity Detail -->
-                <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-sm font-bold text-slate-700">
-                        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        รายละเอียดกิจกรรม
-                    </label>
-                    <textarea name="activity_detail" rows="4" required placeholder="ระบุรายละเอียดงานที่ทำ..."
-                        class="modern-input w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none font-medium text-slate-700"></textarea>
-                </div>
-
-                <!-- Category -->
-                <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-sm font-bold text-slate-700">
-                        <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                        </svg>
-                        หมวดหมู่
-                    </label>
-                    <select name="category_id"
-                        class="modern-input w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none appearance-none bg-white transition-all cursor-pointer font-semibold text-slate-700">
-                        <option value="">-- เลือกหมวดหมู่ --</option>
-                        <?php foreach ($categories as $cat): ?>
-                            <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name_th']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="flex gap-4 pt-6 border-t-2 border-slate-100">
-                    <button type="button" onclick="closeModal()"
-                        class="flex-1 px-6 py-4 border-2 border-slate-300 text-slate-700 rounded-xl font-bold hover:bg-slate-50 hover:border-slate-400 transition-all hover:-translate-y-0.5 shadow-sm">
-                        ยกเลิก
-                    </button>
-                    <button type="submit" name="btn_save"
-                        class="flex-1 px-6 py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-purple-700 shadow-xl shadow-indigo-200 transition-all hover:-translate-y-0.5">
-                        <span class="flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                            </svg>
-                            บันทึกข้อมูล
-                        </span>
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 
     <script>
         const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
-    </script>
+        const calendarEvents = <?= json_encode($calendar_events) ?>;
+        let calendar = null;
 
-    <script>
+        function switchView(viewName) {
+            const tableView = document.getElementById('view-table');
+            const calView = document.getElementById('view-calendar');
+            const btnTable = document.getElementById('btn-view-table');
+            const btnCal = document.getElementById('btn-view-calendar');
+
+            if (viewName === 'table') {
+                tableView.classList.remove('hidden');
+                calView.classList.add('hidden');
+                btnTable.className = "px-6 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 bg-indigo-600 text-white shadow-md";
+                btnCal.className = "px-6 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 text-slate-600 hover:text-indigo-600";
+            } else {
+                tableView.classList.add('hidden');
+                calView.classList.remove('hidden');
+                btnCal.className = "px-6 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 bg-indigo-600 text-white shadow-md";
+                btnTable.className = "px-6 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 text-slate-600 hover:text-indigo-600";
+                if (calendar) calendar.render();
+            }
+
+            const url = new URL(window.location);
+            url.searchParams.set('view', viewName);
+            window.history.pushState({}, '', url);
+        }
+
+        /* ✅ FIX 4: เพิ่มการตรวจสอบ Login ใน JS */
+        function checkAuthAndOpen(callback) {
+            if (!isLoggedIn) {
+                alert('⚠️ กรุณาเข้าสู่ระบบก่อนเพิ่มกิจกรรม');
+                return;
+            }
+            callback();
+        }
+
+        function openModal(dateStr, startTime = '09:00', endTime = '10:00') {
+            const modal = document.getElementById('calendarModal');
+            document.getElementById('m_work_date').value = dateStr;
+            document.getElementById('m_start_time').value = startTime;
+            document.getElementById('m_end_time').value = endTime;
+
+            const d = new Date(dateStr);
+            const options = {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long'
+            };
+            document.getElementById('modal_date_display').textContent = d.toLocaleDateString('th-TH', options);
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('calendarModal').classList.add('hidden');
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialView = urlParams.get('view') || 'table';
+
             const calendarEl = document.getElementById('calendar');
-
-            const calendar = new FullCalendar.Calendar(calendarEl, {
+            calendar = new FullCalendar.Calendar(calendarEl, {
                 locale: 'th',
-                firstDay: 1,
                 initialView: 'dayGridMonth',
-                height: 'auto',
-
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
-
                 buttonText: {
                     today: 'วันนี้',
                     month: 'เดือน',
                     week: 'สัปดาห์',
                     day: 'วัน'
                 },
-
-                events: <?= json_encode($events) ?>,
-
-                selectable: isLoggedIn,
-                selectMirror: isLoggedIn,
+                events: calendarEvents,
+                selectable: true, 
                 editable: false,
-                eventStartEditable: false,
-                eventDurationEditable: false,
 
                 dateClick: function(info) {
-                    if (!isLoggedIn) return;
-                    if (info.date instanceof Date) {
-                        openModalFromDateClick(info);
-                    } else {
-                        openModalForDate(info.dateStr);
-                    }
+                    checkAuthAndOpen(() => openModal(info.dateStr));
                 },
 
                 select: function(info) {
-                    if (!isLoggedIn) return;
-                    openModalFromSelection(info);
-                },
-
-                eventClick: function(info) {
-                    if (!isLoggedIn) return;
-                    const start = info.event.start.toLocaleTimeString('th-TH', {
-                        hour: '2-digit',
-                        minute: '2-digit'
+                    checkAuthAndOpen(() => {
+                        const st = info.start.toTimeString().substring(0, 5);
+                        const et = info.end ? info.end.toTimeString().substring(0, 5) : st;
+                        openModal(info.startStr.split('T')[0], st, et);
                     });
-                    const end = info.event.end ?
-                        info.event.end.toLocaleTimeString('th-TH', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        }) : '-';
-                    alert(`📌 ${info.event.title}\n⏰ ${start} - ${end}`);
                 },
 
-                dayCellDidMount: function(arg) {
-                    if (!isLoggedIn) {
-                        arg.el.style.cursor = 'not-allowed';
-                    }
-                },
-
-                eventContent: function(arg) {
-                    const start = arg.event.start;
-                    const end = arg.event.end;
-
-                    const fmt = (d) =>
-                        d.toLocaleTimeString('th-TH', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
-
-                    const timeText = end ?
-                        `${fmt(start)} – ${fmt(end)}` :
-                        fmt(start);
-
-                    return {
-                        html: `
-            <div class="fc-custom-event">
-                <div class="fc-custom-time">${timeText}</div>
-                <div class="fc-custom-title">${arg.event.title}</div>
-            </div>
-        `
-                    };
-                },
-
+                // คลิกที่ Event เดิม
+                eventClick: function(info) {
+                    alert(`📌 ${info.event.title}\n🕒 ${info.event.start.toLocaleTimeString('th-TH')}`);
+                }
             });
 
-            calendar.render();
-        });
-
-        function openModalFromSelection(info) {
-            const modal = document.getElementById('eventModal');
-            const dateDisplay = document.getElementById('modal_date_display');
-            const start = info.start;
-            const end = info.end ? info.end : new Date(start.getTime() + 60 * 60000);
-
-            const dateStr = start.getFullYear() + '-' +
-                String(start.getMonth() + 1).padStart(2, '0') + '-' +
-                String(start.getDate()).padStart(2, '0');
-
-            const startTime = String(start.getHours()).padStart(2, '0') + ':' +
-                String(start.getMinutes()).padStart(2, '0');
-            const endTime = String(end.getHours()).padStart(2, '0') + ':' +
-                String(end.getMinutes()).padStart(2, '0');
-
-            const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
-            const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-            ];
-
-            const thaiDate = `${thaiDays[start.getDay()]}ที่ ${start.getDate()} ${thaiMonths[start.getMonth()]} ${start.getFullYear() + 543}`;
-
-            document.getElementById('m_work_date').value = dateStr;
-            document.getElementById('m_start_time').value = startTime;
-            document.getElementById('m_end_time').value = endTime;
-            dateDisplay.textContent = thaiDate;
-
-            modal.classList.remove('hidden');
-        }
-
-        function openModalForDate(dateStr) {
-            const modal = document.getElementById('eventModal');
-            const dateDisplay = document.getElementById('modal_date_display');
-            const date = new Date(dateStr + 'T00:00:00');
-
-            const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
-            const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-            ];
-
-            const thaiDate = `${thaiDays[date.getDay()]}ที่ ${date.getDate()} ${thaiMonths[date.getMonth()]} ${date.getFullYear() + 543}`;
-
-            document.getElementById('m_work_date').value = dateStr;
-            document.getElementById('m_start_time').value = '09:00';
-            document.getElementById('m_end_time').value = '17:00';
-            dateDisplay.textContent = thaiDate;
-
-            modal.classList.remove('hidden');
-        }
-
-        function openModalFromDateClick(info) {
-            const modal = document.getElementById('eventModal');
-            const dateDisplay = document.getElementById('modal_date_display');
-            const start = info.date;
-            const end = new Date(start.getTime() + 60 * 60000);
-
-            const dateStr = start.getFullYear() + '-' +
-                String(start.getMonth() + 1).padStart(2, '0') + '-' +
-                String(start.getDate()).padStart(2, '0');
-
-            const startTime = String(start.getHours()).padStart(2, '0') + ':' +
-                String(start.getMinutes()).padStart(2, '0');
-            const endTime = String(end.getHours()).padStart(2, '0') + ':' +
-                String(end.getMinutes()).padStart(2, '0');
-
-            const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
-            const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-            ];
-
-            const thaiDate = `${thaiDays[start.getDay()]}ที่ ${start.getDate()} ${thaiMonths[start.getMonth()]} ${start.getFullYear() + 543}`;
-
-            document.getElementById('m_work_date').value = dateStr;
-            document.getElementById('m_start_time').value = startTime;
-            document.getElementById('m_end_time').value = endTime;
-            dateDisplay.textContent = thaiDate;
-
-            modal.classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('eventModal').classList.add('hidden');
-        }
-
-        document.getElementById('eventModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeModal();
-            }
+            switchView(initialView);
         });
     </script>
 </body>

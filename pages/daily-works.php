@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
         $message = '❌ ไม่สามารถแก้ไขข้อมูลย้อนหลัง หรือยังไม่ได้เข้าสู่ระบบ';
     } else {
         $work_date = $_POST['work_date'] ?? $selected_date;
-        
+
         $logs_update = $_POST['logs_update'] ?? [];
         $logs_new    = $_POST['logs_new'] ?? [];
 
@@ -87,7 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
                     $cat_db = ($category_id !== '' && isset($allowedCatIds[(string)$category_id])) ? (int)$category_id : null;
 
                     // แปลง Key เวลา
-                    $hour = 0; $min = 0;
+                    $hour = 0;
+                    $min = 0;
                     if (strpos($timeKey, '_30') !== false) {
                         $parts = explode('_', $timeKey);
                         $hour = (int)$parts[0];
@@ -98,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
                     }
 
                     $startTimeStr = sprintf("%02d:%02d:00", $hour, $min);
-                    $endTimeStr = date('H:i:s', strtotime("$startTimeStr +1 hour")); 
+                    $endTimeStr = date('H:i:s', strtotime("$startTimeStr +1 hour"));
 
                     $stmtInsert->execute([
                         ':uid'    => $user['id'],
@@ -355,10 +356,10 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                             <tbody class="divide-y divide-slate-100 bg-white">
                                 <?php
                                 $timeSlots = [];
-                                // สร้าง Loop เวลาตามเดิม (8-16)
+                                // สร้าง Loop เวลา 8-16 และบังคับใส่ช่วง 30 นาทีลงไปทุกชั่วโมง
                                 for ($i = 8; $i <= 16; $i++) {
                                     $timeSlots[] = (string)$i;
-                                    if (isset($existing_logs[$i . '_30'])) {
+                                    if ($i < 16) {
                                         $timeSlots[] = $i . '_30';
                                     }
                                 }
@@ -367,22 +368,14 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                     $logsInHour = $existing_logs[$h] ?? [];
                                     $isHalf = str_contains($h, '_30');
 
-                                    // Filter: ถ้าเป็นชั่วโมงหลัก (8,9..) เอาเฉพาะงานที่นาทีเป็น 0
-                                    // แต่ถ้ามีหลายงานที่นาทีเป็น 0 เหมือนกัน มันจะมาครบทั้งหมดใน Array นี้
-                                    if (!$isHalf) {
-                                        $logsInHour = array_filter($logsInHour, function ($row) {
-                                            if (empty($row['start_time'])) return true;
-                                            $parts = explode(':', $row['start_time']);
-                                            return isset($parts[1]) && (int)$parts[1] === 0;
-                                        });
-                                        $logsInHour = array_values($logsInHour);
-                                    }
+                                    // กรองข้อมูล: ถ้าเป็นชั่วโมงเต็ม (เช่น 8) ให้กรองเอาเฉพาะนาที 00
+                                    // (ส่วนนาที 30 จะไปอยู่ในรอบ $h ที่เป็น '8_30' เองโดยอัตโนมัติจาก Logic Part 2)
+                                    // ดังนั้นตรงนี้ไม่ต้อง filter อะไรเพิ่มแล้วถ้า Part 2 ถูกต้อง
 
-                                    // แยกข้อมูล: ตัวแรกเอาไว้ใส่ Input, ตัวที่เหลือเอาไว้แสดงผลเฉยๆ
+                                    // ข้อมูลตัวแรก (ถ้ามี) เอาไว้ใช้ดูเวลา start/end
                                     $mainLog = $logsInHour[0] ?? [];
-                                    $extraLogs = array_slice($logsInHour, 1);
 
-                                    // --- LOGIC คำนวณเวลาที่จะแสดง (อิงจากตัวแรก) ---
+                                    // คำนวณเวลาที่จะแสดงผล
                                     if (!empty($mainLog['start_time'])) {
                                         $showStart = date('H:i', strtotime($mainLog['start_time']));
                                         $showEnd = !empty($mainLog['end_time']) ? date('H:i', strtotime($mainLog['end_time'])) : sprintf("%02d:00", intval($h) + 1);
@@ -404,7 +397,7 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                         <td class="px-6 py-5 align-top border-r border-slate-100">
                                             <div class="flex flex-col items-start justify-center h-full pt-1">
                                                 <div class="flex items-center gap-2">
-                                                    <div class="w-2 h-2 rounded-full <?= !empty($mainLog) ? 'bg-indigo-500 ring-4 ring-indigo-100' : 'bg-slate-300' ?>"></div>
+                                                    <div class="w-2 h-2 rounded-full <?= !empty($logsInHour) ? 'bg-indigo-500 ring-4 ring-indigo-100' : 'bg-slate-300' ?>"></div>
                                                     <span class="text-lg font-bold text-slate-700 font-mono tracking-tight">
                                                         <?= $showStart ?>
                                                     </span>
@@ -424,7 +417,6 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                         <td class="px-6 py-4 align-top">
                                             <?php if ($isLoggedIn): ?>
                                                 <div class="flex flex-col gap-4">
-
                                                     <?php if (!empty($logsInHour)): ?>
                                                         <?php foreach ($logsInHour as $entry): ?>
                                                             <div class="relative w-full">
@@ -435,7 +427,6 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                                                 <div class="absolute bottom-0 left-0 right-0 h-px bg-slate-200 group-hover:bg-indigo-200 transition-colors"></div>
                                                             </div>
                                                         <?php endforeach; ?>
-
                                                     <?php else: ?>
                                                         <div class="relative w-full">
                                                             <textarea
@@ -446,19 +437,36 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                                             <div class="absolute bottom-0 left-0 right-0 h-px bg-slate-200 group-hover:bg-indigo-200 transition-colors"></div>
                                                         </div>
                                                     <?php endif; ?>
-
                                                 </div>
                                             <?php else: ?>
+                                                <?php if (!empty($logsInHour)): ?>
+                                                    <div class="flex flex-col gap-3">
+                                                        <?php foreach ($logsInHour as $entry): ?>
+                                                            <div class="bg-white/50 border border-slate-100 p-3 rounded-lg shadow-sm">
+                                                                <?php if (!empty($entry['display_th'])): ?>
+                                                                    <div class="text-xs text-indigo-600 font-bold mb-1">
+                                                                        <?= htmlspecialchars($entry['display_th']) ?>
+                                                                    </div>
+                                                                <?php endif; ?>
+                                                                <p class="text-sm text-slate-700">
+                                                                    <?= htmlspecialchars($entry['activity_detail']) ?>
+                                                                </p>
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <span class="text-slate-300 text-sm italic font-light">- ว่าง -</span>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </td>
 
-                                        <td class="px-6 py-4 align-top">
+                                        <td class="px-6 py-4 align-top w-64 min-w-[200px]">
                                             <?php if ($isLoggedIn): ?>
                                                 <div class="flex flex-col gap-4">
-
                                                     <?php if (!empty($logsInHour)): ?>
                                                         <?php foreach ($logsInHour as $entry): ?>
-                                                            <div class="relative pt-1 h-[3.5rem] flex items-start"> <select name="logs_update[<?= $entry['id'] ?>][category_id]" class="w-full bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 transition-all hover:bg-white hover:shadow-sm">
+                                                            <div class="relative pt-1 h-[3.5rem] flex items-start">
+                                                                <select name="logs_update[<?= $entry['id'] ?>][category_id]" class="w-full bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 transition-all hover:bg-white hover:shadow-sm">
                                                                     <option value="">-- หมวดหมู่ --</option>
                                                                     <?php foreach ($categories as $cat): ?>
                                                                         <option value="<?= $cat['id'] ?>" <?= (($entry['category_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>>
@@ -468,7 +476,6 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                                                 </select>
                                                             </div>
                                                         <?php endforeach; ?>
-
                                                     <?php else: ?>
                                                         <div class="relative pt-1">
                                                             <select name="logs_new[<?= $h ?>][category_id]" class="w-full bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 transition-all hover:bg-white hover:shadow-sm">
@@ -481,11 +488,27 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                                             </select>
                                                         </div>
                                                     <?php endif; ?>
-
                                                 </div>
                                             <?php else: ?>
+                                                <div class="flex flex-col gap-3">
+                                                    <?php if (!empty($logsInHour)): ?>
+                                                        <?php foreach ($logsInHour as $entry): ?>
+                                                            <div class="h-[3.5rem] flex items-start pt-3"> <?php if (!empty($entry['category_name'])): ?>
+                                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                                                        <?= htmlspecialchars($entry['category_name']) ?>
+                                                                    </span>
+                                                                <?php else: ?>
+                                                                    <span class="text-slate-300 text-xs">-</span>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    <?php else: ?>
+                                                        <span class="text-slate-300 text-sm">-</span>
+                                                    <?php endif; ?>
+                                                </div>
                                             <?php endif; ?>
                                         </td>
+
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

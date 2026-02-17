@@ -3,14 +3,27 @@ date_default_timezone_set('Asia/Bangkok');
 global $pdo;
 
 /* ====== SETUP & INIT ====== */
-$y = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
-$m = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('m');
-$d = isset($_GET['day']) ? (int)$_GET['day'] : (int)date('d');
+$currentY = (int)date('Y');
+$currentM = (int)date('m');
+$currentD = (int)date('d');
 
+$y = isset($_GET['year']) ? (int)$_GET['year'] : $currentY;
+$m = isset($_GET['month']) ? (int)$_GET['month'] : $currentM;
+$d = isset($_GET['day']) ? (int)$_GET['day'] : $currentD;
+
+// ตรวจสอบความถูกต้องของวันที่
 if (!checkdate($m, $d, $y)) {
-    $y = (int)date('Y');
-    $m = (int)date('m');
-    $d = (int)date('d');
+    // กรณีที่เลือกวันที่ 31 ในเดือนที่มี 30 วัน หรือ 29-31 ในเดือน ก.พ.
+    if (checkdate($m, 1, $y)) {
+        // ถ้าเดือนและปีถูกต้อง แต่เลขวันเกิน ให้ปรับเป็นวันสุดท้ายของเดือนนั้น
+        $d = (int)date('t', strtotime("$y-$m-01"));
+    } else {
+        // กรณีปีหรือเดือนผิดปกติจริงๆ ถึงจะ Reset เป็นค่าปัจจุบัน
+        // **จุดนี้เองที่ทำให้มันดีดกลับไปเป็น ม.ค. ถ้า checkdate พลาด**
+        $y = (int)date('Y');
+        $m = (int)date('m');
+        $d = (int)date('d');
+    }
 }
 
 $selected_date = sprintf('%04d-%02d-%02d', $y, $m, $d);
@@ -45,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
     } else {
         $work_date = $_POST['work_date'] ?? $selected_date;
 
+        // รับค่า 2 ส่วน: ส่วนที่แก้ไข (logs_update) และ ส่วนที่เพิ่มใหม่ (logs_new)
         $logs_update = $_POST['logs_update'] ?? [];
         $logs_new    = $_POST['logs_new'] ?? [];
 
@@ -52,7 +66,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
             if (isset($pdo)) {
                 $pdo->beginTransaction();
 
-                // 1. จัดการรายการเดิม (แก้ไข หรือ ลบ)
+                // ---------------------------------------------------------
+                // 1. จัดการรายการเดิม (UPDATE หรือ DELETE)
+                // ---------------------------------------------------------
                 $stmtUpdate = $pdo->prepare("UPDATE daily_work_logs SET activity_detail = :detail, category_id = :catid, updated_at = NOW() WHERE id = :id AND user_id = :uid");
                 $stmtDelete = $pdo->prepare("DELETE FROM daily_work_logs WHERE id = :id AND user_id = :uid");
 
@@ -61,11 +77,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
                     $category_id = $data['category_id'] ?? '';
                     $cat_db = ($category_id !== '' && isset($allowedCatIds[(string)$category_id])) ? (int)$category_id : null;
 
+                    // ✅ เงื่อนไข: ถ้าข้อความว่างเปล่า ให้ถือว่า "ลบ" กิจกรรมนั้นออก
                     if ($activity === '') {
-                        // ถ้าเคลียร์ข้อความ = ลบทิ้ง
                         $stmtDelete->execute([':id' => $id, ':uid' => $user['id']]);
                     } else {
-                        // ถ้ามีข้อความ = อัปเดต
+                        // ถ้ามีข้อความ ให้ทำการ "อัปเดต"
                         $stmtUpdate->execute([
                             ':detail' => $activity,
                             ':catid'  => $cat_db,
@@ -75,18 +91,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
                     }
                 }
 
-                // 2. จัดการรายการใหม่ (Insert)
-                // ✅ แก้ไข: ลบ start_hour และ :sh ออกจากคำสั่ง SQL
+                // ---------------------------------------------------------
+                // 2. จัดการรายการใหม่ (INSERT)
+                // ---------------------------------------------------------
+                // หมายเหตุ: ตัด start_hour ออก เพื่อแก้ปัญหา Generated Column
                 $stmtInsert = $pdo->prepare("INSERT INTO daily_work_logs (user_id, work_date, start_time, end_time, activity_detail, category_id) VALUES (:uid, :wdate, :stime, :etime, :detail, :catid)");
 
                 foreach ($logs_new as $timeKey => $data) {
                     $activity = trim($data['activity'] ?? '');
-                    if ($activity === '') continue; // ข้ามถ้าไม่ได้กรอก
+
+                    // ✅ เงื่อนไข: ถ้าช่องใหม่ไม่ได้กรอกอะไรเลย ให้ "ข้าม" (ไม่บันทึก)
+                    if ($activity === '') continue;
 
                     $category_id = $data['category_id'] ?? '';
                     $cat_db = ($category_id !== '' && isset($allowedCatIds[(string)$category_id])) ? (int)$category_id : null;
 
-                    // แปลง Key เวลา
+                    // แปลง Key เวลา (เช่น '8' หรือ '8_30') เป็นเวลาจริง
                     $hour = 0;
                     $min = 0;
                     if (strpos($timeKey, '_30') !== false) {
@@ -108,7 +128,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
                         ':etime'  => $endTimeStr,
                         ':detail' => $activity,
                         ':catid'  => $cat_db
-                        // ✅ แก้ไข: ลบ ':sh' => $hour ออก เพราะ Database จะคำนวณเอง
                     ]);
                 }
 
@@ -189,18 +208,16 @@ if (isset($pdo)) {
     while ($row = $stmt_log->fetch(PDO::FETCH_ASSOC)) {
         if (!empty($row['start_time'])) {
             [$hh, $mm] = explode(':', $row['start_time']);
-            $h = (int)$hh;
-            $m = (int)$mm;
+            $hour = (int)$hh;    
+            $minute = (int)$mm; 
         } else {
-            $h = (int)($row['start_hour'] ?? 0);
-            $m = 0;
+            $hour = (int)($row['start_hour'] ?? 0);
+            $minute = 0;
         }
 
-        if ($h <= 0) continue;
+        if ($hour <= 0) continue;
 
-        // สร้าง Key เดียวที่แม่นยำ
-        // ถ้านาทีเป็น 30 ให้ใช้ key '8_30' ถ้านาทีเป็น 0 ให้ใช้ key '8'
-        $keyHour = ($m === 30) ? $h . '_30' : (string)$h;
+        $keyHour = ($minute === 30) ? $hour . '_30' : (string)$hour;
 
         $existing_logs[$keyHour][] = $row;
     }
@@ -255,6 +272,7 @@ if (isset($pdo)) {
 }
 
 if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันทึกข้อมูลเรียบร้อยแล้ว";
+
 ?>
 
 <!DOCTYPE html>
@@ -332,8 +350,17 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                 วันที่:
                             </span>
                             <select name="day" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer font-medium text-slate-700 hover:text-indigo-700"><?php for ($i = 1; $i <= 31; $i++): ?><option value="<?= $i ?>" <?= $i == $d ? 'selected' : '' ?>><?= $i ?></option><?php endfor; ?></select><span class="mx-1 text-slate-400">/</span>
-                            <select name="month" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer font-medium text-slate-700 hover:text-indigo-700"><?php $ms = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-                                                                                                                                                                                    foreach ($ms as $i => $n): ?><option value="<?= $i + 1 ?>" <?= $i + 1 == $m ? 'selected' : '' ?>><?= $n ?></option><?php endforeach; ?></select><span class="mx-1 text-slate-400">/</span>
+                            <select name="month" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer font-medium text-slate-700 hover:text-indigo-700">
+                                <?php
+                                $ms = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                                foreach ($ms as $i => $n):
+                                    $val = $i + 1;
+                                ?>
+                                    <option value="<?= $val ?>" <?= ($val == $m) ? 'selected' : '' ?>>
+                                        <?= $n ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                             <select name="year" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer font-medium text-slate-700 hover:text-indigo-700"><?php for ($i = date('Y') - 1; $i <= date('Y') + 1; $i++): ?><option value="<?= $i ?>" <?= $i == $y ? 'selected' : '' ?>><?= $i + 543 ?></option><?php endfor; ?></select>
                         </div>
                     </form>

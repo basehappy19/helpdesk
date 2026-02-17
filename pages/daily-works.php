@@ -141,11 +141,28 @@ if (isset($pdo)) {
     $stmt_log->execute($params_table);
 
     while ($row = $stmt_log->fetch(PDO::FETCH_ASSOC)) {
-        $h = 0;
-        if (!empty($row['start_hour'])) $h = (int)$row['start_hour'];
-        else if (!empty($row['start_time'])) $h = (int)explode(':', $row['start_time'])[0];
-        if ($h > 0) $existing_logs[$h][] = $row;
+
+        if (!empty($row['start_time'])) {
+            [$hh, $mm] = explode(':', $row['start_time']);
+            $h = (int)$hh;
+            $m = (int)$mm;
+        } else {
+            $h = (int)($row['start_hour'] ?? 0);
+            $m = 0;
+        }
+
+        if ($h <= 0) continue;
+
+        $keyHour = (string)$h;
+        $existing_logs[$keyHour][] = $row;
+
+        if ($m > 0) {
+            $halfKey = $h . '_30';
+            $existing_logs[$halfKey][] = $row;
+        }
     }
+
+
 
     // --- 2. CALENDAR VIEW (ดึงข้อมูลใส่ปฏิทิน) ---
     $stmt_cal = $pdo->query("
@@ -292,11 +309,36 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                     <th class="px-6 py-4 w-64">หมวดหมู่</th>
                                 </tr>
                             </thead>
+                            <?php ksort($existing_logs); ?>
+
                             <tbody class="divide-y divide-slate-100">
-                                <?php for ($h = 8; $h <= 16; $h++): $logsInHour = $existing_logs[$h] ?? []; ?>
+                                <?php
+                                $timeSlots = [];
+
+                                for ($i = 8; $i <= 16; $i++) {
+
+                                    $timeSlots[] = (string)$i;
+
+                                    if (isset($existing_logs[$i . '_30'])) {
+                                        $timeSlots[] = $i . '_30';
+                                    }
+                                }
+
+                                foreach ($timeSlots as $h):
+                                    $logsInHour = $existing_logs[$h] ?? [];
+                                ?>
                                     <tr class="hover:bg-slate-50">
                                         <td class="px-6 py-3 align-top">
-                                            <span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold"><?= sprintf("%02d:00", $h) ?></span>
+                                            <span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold"><?php
+                                                                                                                    if (str_contains($h, '_30')) {
+                                                                                                                        $label = sprintf("%02d:30", intval($h));
+                                                                                                                    } else {
+                                                                                                                        $label = sprintf("%02d:00", intval($h));
+                                                                                                                    }
+
+                                                                                                                    ?>
+                                                <?= $label ?>
+                                            </span>
                                         </td>
 
                                         <td class="px-6 py-3 align-top">
@@ -363,7 +405,7 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                             <?php endif; ?>
                                         </td>
                                     </tr>
-                                <?php endfor; ?>
+                                <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>

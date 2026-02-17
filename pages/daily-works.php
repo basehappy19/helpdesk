@@ -216,6 +216,7 @@ if (isset($pdo)) {
     }
 }
 
+var_dump($existing_logs);
 
 if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันทึกข้อมูลเรียบร้อยแล้ว";
 ?>
@@ -283,16 +284,21 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
 
         <div id="view-table" class="<?= $defaultView === 'table' ? '' : 'hidden' ?> fade-enter-active">
             <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-                <div class="px-6 py-5 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between">
+                <div class="px-6 py-5 bg-white border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between sticky top-0 z-10 shadow-sm">
                     <form method="get" class="flex items-center gap-3 flex-wrap">
                         <input type="hidden" name="page" value="daily-works">
                         <input type="hidden" name="view" value="table">
-                        <div class="flex items-center bg-white border border-slate-300 rounded-lg px-3 py-2 shadow-sm">
-                            <span class="text-sm font-medium text-slate-600 mr-2">วันที่:</span>
-                            <select name="day" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer"><?php for ($i = 1; $i <= 31; $i++): ?><option value="<?= $i ?>" <?= $i == $d ? 'selected' : '' ?>><?= $i ?></option><?php endfor; ?></select><span class="mx-1">/</span>
-                            <select name="month" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer"><?php $ms = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-                                                                                                                                    foreach ($ms as $i => $n): ?><option value="<?= $i + 1 ?>" <?= $i + 1 == $m ? 'selected' : '' ?>><?= $n ?></option><?php endforeach; ?></select><span class="mx-1">/</span>
-                            <select name="year" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer"><?php for ($i = date('Y') - 1; $i <= date('Y') + 1; $i++): ?><option value="<?= $i ?>" <?= $i == $y ? 'selected' : '' ?>><?= $i + 543 ?></option><?php endfor; ?></select>
+                        <div class="flex items-center bg-slate-50 border border-slate-300 rounded-lg px-4 py-2 shadow-sm hover:border-indigo-400 transition-colors">
+                            <span class="text-sm font-bold text-indigo-600 mr-2 uppercase tracking-wide">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                วันที่:
+                            </span>
+                            <select name="day" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer font-medium text-slate-700 hover:text-indigo-700"><?php for ($i = 1; $i <= 31; $i++): ?><option value="<?= $i ?>" <?= $i == $d ? 'selected' : '' ?>><?= $i ?></option><?php endfor; ?></select><span class="mx-1 text-slate-400">/</span>
+                            <select name="month" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer font-medium text-slate-700 hover:text-indigo-700"><?php $ms = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+                                                                                                                                                                                    foreach ($ms as $i => $n): ?><option value="<?= $i + 1 ?>" <?= $i + 1 == $m ? 'selected' : '' ?>><?= $n ?></option><?php endforeach; ?></select><span class="mx-1 text-slate-400">/</span>
+                            <select name="year" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer font-medium text-slate-700 hover:text-indigo-700"><?php for ($i = date('Y') - 1; $i <= date('Y') + 1; $i++): ?><option value="<?= $i ?>" <?= $i == $y ? 'selected' : '' ?>><?= $i + 543 ?></option><?php endfor; ?></select>
                         </div>
                     </form>
                 </div>
@@ -303,104 +309,177 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="bg-slate-50 text-slate-600 text-sm border-b">
-                                    <th class="px-6 py-4 w-24">เวลา</th>
-                                    <th class="px-6 py-4">รายละเอียด</th>
-                                    <th class="px-6 py-4 w-64">หมวดหมู่</th>
+                                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold border-b border-slate-200">
+                                    <th class="px-6 py-4 w-48 min-w-[150px]">ช่วงเวลา</th>
+                                    <th class="px-6 py-4">รายละเอียดภาระงาน</th>
+                                    <th class="px-6 py-4 w-64 min-w-[200px]">หมวดหมู่</th>
                                 </tr>
                             </thead>
                             <?php ksort($existing_logs); ?>
 
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody class="divide-y divide-slate-100 bg-white">
                                 <?php
                                 $timeSlots = [];
-
+                                // สร้าง Loop เวลาตามเดิม (8-16)
                                 for ($i = 8; $i <= 16; $i++) {
-
                                     $timeSlots[] = (string)$i;
-
                                     if (isset($existing_logs[$i . '_30'])) {
                                         $timeSlots[] = $i . '_30';
                                     }
                                 }
 
-                                foreach ($timeSlots as $h):
+                                foreach ($timeSlots as $index => $h):
                                     $logsInHour = $existing_logs[$h] ?? [];
-                                ?>
-                                    <tr class="hover:bg-slate-50">
-                                        <td class="px-6 py-3 align-top">
-                                            <span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold"><?php
-                                                                                                                    if (str_contains($h, '_30')) {
-                                                                                                                        $label = sprintf("%02d:30", intval($h));
-                                                                                                                    } else {
-                                                                                                                        $label = sprintf("%02d:00", intval($h));
-                                                                                                                    }
+                                    $isHalf = str_contains($h, '_30');
 
-                                                                                                                    ?>
-                                                <?= $label ?>
-                                            </span>
+                                    // ✅ แก้ไข: กรองข้อมูลเพื่อแก้ปัญหาซ้ำ
+                                    // ถ้าเป็นช่องชั่วโมงหลัก (เช่น 8, 9) ให้เอาเฉพาะงานที่เริ่มนาทีที่ :00 เท่านั้น
+                                    if (!$isHalf) {
+                                        $logsInHour = array_filter($logsInHour, function ($row) {
+                                            if (empty($row['start_time'])) return true; // ถ้าไม่มีเวลา (Log เก่า) ให้แสดง
+                                            $parts = explode(':', $row['start_time']);
+                                            return isset($parts[1]) && (int)$parts[1] === 0; // แสดงเฉพาะที่นาทีเป็น 0
+                                        });
+                                        $logsInHour = array_values($logsInHour); // เรียง index ใหม่
+                                    }
+
+                                    $myLog = $logsInHour[0] ?? [];
+
+                                    // --- LOGIC คำนวณเวลาที่จะแสดง ---
+                                    if (!empty($myLog['start_time'])) {
+                                        // ถ้ามีข้อมูล ใช้เวลาจริงจาก DB
+                                        $showStart = date('H:i', strtotime($myLog['start_time']));
+                                        $showEnd = !empty($myLog['end_time']) ? date('H:i', strtotime($myLog['end_time'])) : sprintf("%02d:00", intval($h) + 1);
+                                    } else {
+                                        // ถ้าไม่มีข้อมูล (ช่องว่าง) ให้ใช้เวลา Default ตาม Slot
+                                        $val = intval($h);
+                                        if ($isHalf) {
+                                            $showStart = sprintf("%02d:30", $val);
+                                            $showEnd = sprintf("%02d:00", $val + 1);
+                                        } else {
+                                            $showStart = sprintf("%02d:00", $val);
+                                            $showEnd = sprintf("%02d:00", $val + 1);
+                                        }
+                                    }
+
+                                    // สลับสีพื้นหลัง
+                                    $rowClass = ($index % 2 == 0) ? 'bg-white' : 'bg-slate-100/60';
+                                ?>
+                                    <tr class="<?= $rowClass ?> hover:bg-indigo-50/40 transition-colors group">
+
+                                        <td class="px-6 py-5 align-top border-r border-slate-100">
+                                            <div class="flex flex-col items-start justify-center h-full pt-1">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-2 h-2 rounded-full bg-slate-300"></div>
+                                                    <span class="text-lg font-bold text-slate-700 font-mono tracking-tight">
+                                                        <?= $showStart ?>
+                                                    </span>
+                                                </div>
+                                                <div class="pl-[1.2rem] border-l-2 border-indigo-100 ml-[0.24rem] py-1 my-1">
+                                                    <span class="text-xs font-medium text-slate-400 block px-2">ถึง</span>
+                                                </div>
+                                                <div class="flex items-center gap-2 opacity-60">
+                                                    <div class="w-1.5 h-1.5 rounded-full bg-slate-300 ml-[0.08rem]"></div>
+                                                    <span class="text-sm font-semibold text-slate-500 font-mono tracking-tight">
+                                                        <?= $showEnd ?>
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </td>
 
-                                        <td class="px-6 py-3 align-top">
+                                        <td class="px-6 py-4 align-top">
                                             <?php if ($isLoggedIn): ?>
-                                                <?php $myLog = $logsInHour[0] ?? []; ?>
-                                                <input type="text" name="logs[<?= $h ?>][activity]" value="<?= htmlspecialchars($myLog['activity_detail'] ?? '') ?>" class="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
+                                                <div class="relative">
+                                                    <?php if (!$isHalf): ?>
+                                                        <textarea
+                                                            name="logs[<?= $h ?>][activity]"
+                                                            rows="2"
+                                                            placeholder="ระบุรายละเอียดงาน..."
+                                                            class="w-full border-0 bg-transparent p-0 text-slate-800 placeholder:text-slate-300 focus:ring-0 focus:border-indigo-500 sm:text-sm resize-none leading-relaxed"><?= htmlspecialchars($myLog['activity_detail'] ?? '') ?></textarea>
+                                                        <div class="absolute bottom-0 left-0 right-0 h-px bg-slate-200 group-hover:bg-indigo-200 transition-colors"></div>
+                                                    <?php else: ?>
+                                                        <div class="relative group/tooltip">
+                                                            <textarea
+                                                                disabled
+                                                                rows="2"
+                                                                class="w-full border-0 bg-transparent p-0 text-slate-600 sm:text-sm resize-none leading-relaxed cursor-default select-text"><?= htmlspecialchars($myLog['activity_detail'] ?? '') ?></textarea>
+                                                            <div class="absolute top-0 right-0 opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
+                                                                <span class="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-full">แก้ไขที่มุมมองปฏิทิน</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="absolute bottom-0 left-0 right-0 h-px bg-slate-200 border-dashed"></div>
+                                                    <?php endif; ?>
+                                                </div>
                                             <?php else: ?>
                                                 <?php if (empty($logsInHour)): ?>
-                                                    <span class="text-slate-300 text-sm italic">- ว่าง -</span>
+                                                    <span class="text-slate-300 text-sm italic font-light">- ว่าง -</span>
                                                 <?php else: ?>
                                                     <div class="flex flex-col gap-3">
-                                                        <?php $i = 1;
-                                                        foreach ($logsInHour as $entry): ?>
-                                                            <div class="pb-3 border-b border-slate-300 last:border-0 last:pb-0">
+                                                        <?php foreach ($logsInHour as $entry): ?>
+                                                            <div class="bg-white border border-slate-100 p-3 rounded-lg shadow-sm">
                                                                 <div class="flex items-center gap-2 mb-1">
-                                                                    <span class="bg-slate-100 text-slate-500 text-[10px] font-bold px-1.5 py-0.5 rounded">#<?= $i ?></span>
-                                                                    <div class="flex items-center gap-1 text-xs text-slate-500 font-semibold">
-                                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                                                        </svg>
-                                                                        <?= htmlspecialchars($entry['display_th']) ?>
+                                                                    <div class="flex items-center gap-1 text-xs text-indigo-600 font-bold uppercase tracking-wider">
+                                                                        โดย: <?= htmlspecialchars($entry['display_th']) ?>
                                                                     </div>
                                                                 </div>
-                                                                <p class="text-sm text-slate-700 break-words leading-relaxed pl-1">
+                                                                <p class="text-sm text-slate-700 break-words leading-relaxed">
                                                                     <?= htmlspecialchars($entry['activity_detail']) ?>
                                                                 </p>
                                                             </div>
-                                                        <?php $i++;
-                                                        endforeach; ?>
+                                                        <?php endforeach; ?>
                                                     </div>
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                         </td>
 
-                                        <td class="px-6 py-3 align-top">
+                                        <td class="px-6 py-4 align-top">
                                             <?php if ($isLoggedIn): ?>
-                                                <?php $myLog = $logsInHour[0] ?? []; ?>
-                                                <select name="logs[<?= $h ?>][category_id]" class="w-full border p-2 rounded">
-                                                    <option value="">--</option>
-                                                    <?php foreach ($categories as $cat): ?>
-                                                        <option value="<?= $cat['id'] ?>" <?= (($myLog['category_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>>
-                                                            <?= $cat['name_th'] ?>
-                                                        </option>
-                                                    <?php endforeach; ?>
-                                                </select>
+                                                <?php if (!$isHalf): ?>
+                                                    <div class="relative">
+                                                        <select name="logs[<?= $h ?>][category_id]" class="w-full bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 transition-all hover:bg-white hover:shadow-sm">
+                                                            <option value="">-- หมวดหมู่ --</option>
+                                                            <?php foreach ($categories as $cat): ?>
+                                                                <option value="<?= $cat['id'] ?>" <?= (($myLog['category_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>>
+                                                                    <?= $cat['name_th'] ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <?php if (!empty($myLog['category_id'])): ?>
+                                                        <?php
+                                                        $catName = '-';
+                                                        foreach ($categories as $c) {
+                                                            if ($c['id'] == $myLog['category_id']) {
+                                                                $catName = $c['name_th'];
+                                                                break;
+                                                            }
+                                                        }
+                                                        ?>
+                                                        <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                                            <?= $catName ?>
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="text-slate-300 text-sm">-</span>
+                                                    <?php endif; ?>
+                                                <?php endif; ?>
                                             <?php else: ?>
                                                 <?php if (!empty($logsInHour)): ?>
-                                                    <div class="flex flex-col gap-3">
+                                                    <div class="flex flex-col gap-2 mt-1">
                                                         <?php foreach ($logsInHour as $entry): ?>
-                                                            <div class="h-full flex items-start pb-3 border-b border-transparent last:pb-0">
+                                                            <div>
                                                                 <?php if (!empty($entry['category_name'])): ?>
-                                                                    <span class="bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap">
+                                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                                                                         <?= htmlspecialchars($entry['category_name']) ?>
                                                                     </span>
                                                                 <?php else: ?>
-                                                                    <span class="text-slate-300 text-xs italic">-</span>
+                                                                    <span class="text-slate-300 text-xs">-</span>
                                                                 <?php endif; ?>
                                                             </div>
                                                         <?php endforeach; ?>
                                                     </div>
                                                 <?php else: ?>
-                                                    <span class="text-slate-300 text-sm italic">-</span>
+                                                    <span class="text-slate-300 text-sm">-</span>
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                         </td>
@@ -409,7 +488,19 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                             </tbody>
                         </table>
                     </div>
-                    <?php if ($canEdit): ?><div class="px-6 py-4 border-t flex justify-end"><button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 shadow-md transition-all">บันทึกข้อมูล</button></div><?php endif; ?>
+                    <?php if ($canEdit): ?>
+                        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between sticky bottom-0 z-10">
+                            <span class="text-xs text-slate-400 hidden sm:inline">* ระบบจะบันทึกเฉพาะช่วงเวลามาตรฐาน (ชั่วโมงเต็ม) ข้อมูลช่วงเวลาย่อยจะถูกข้าม</span>
+                            <button type="submit" class="bg-indigo-600 text-white px-8 py-2.5 rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 font-medium transition-all transform hover:-translate-y-0.5 active:translate-y-0">
+                                <span class="flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    บันทึกข้อมูล
+                                </span>
+                            </button>
+                        </div>
+                    <?php endif; ?>
                 </form>
             </div>
         </div>

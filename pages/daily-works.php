@@ -208,8 +208,8 @@ if (isset($pdo)) {
     while ($row = $stmt_log->fetch(PDO::FETCH_ASSOC)) {
         if (!empty($row['start_time'])) {
             [$hh, $mm] = explode(':', $row['start_time']);
-            $hour = (int)$hh;    
-            $minute = (int)$mm; 
+            $hour = (int)$hh;
+            $minute = (int)$mm;
         } else {
             $hour = (int)($row['start_hour'] ?? 0);
             $minute = 0;
@@ -386,7 +386,9 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                 // สร้าง Loop เวลา 8-16 และบังคับใส่ช่วง 30 นาทีลงไปทุกชั่วโมง
                                 for ($i = 8; $i <= 16; $i++) {
                                     $timeSlots[] = (string)$i;
-                                    if ($i < 16) {
+
+
+                                    if (isset($existing_logs[$i . '_30'])) {
                                         $timeSlots[] = $i . '_30';
                                     }
                                 }

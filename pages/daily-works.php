@@ -44,29 +44,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
         $message = '❌ ไม่สามารถแก้ไขข้อมูลย้อนหลัง หรือยังไม่ได้เข้าสู่ระบบ';
     } else {
         $work_date = $_POST['work_date'] ?? $selected_date;
-        $logs = $_POST['logs'] ?? [];
+        
+        $logs_update = $_POST['logs_update'] ?? [];
+        $logs_new    = $_POST['logs_new'] ?? [];
+
         try {
             if (isset($pdo)) {
-                $stmtCheck = $pdo->prepare("SELECT id FROM daily_work_logs WHERE user_id = :uid AND work_date = :wdate AND start_hour = :sh");
-                $stmtInsert = $pdo->prepare("INSERT INTO daily_work_logs (user_id, work_date, start_time, end_time, activity_detail, category_id) VALUES (:uid, :wdate, :stime, :etime, :detail, :catid)");
-                $stmtUpdate = $pdo->prepare("UPDATE daily_work_logs SET activity_detail = :detail, category_id = :catid, updated_at = NOW() WHERE id = :id");
-                $stmtDelete = $pdo->prepare("DELETE FROM daily_work_logs WHERE id = :id");
                 $pdo->beginTransaction();
-                for ($h = 8; $h <= 16; $h++) {
-                    $activity = trim($logs[$h]['activity'] ?? '');
-                    $category_id = $logs[$h]['category_id'] ?? '';
+
+                // 1. จัดการรายการเดิม (แก้ไข หรือ ลบ)
+                $stmtUpdate = $pdo->prepare("UPDATE daily_work_logs SET activity_detail = :detail, category_id = :catid, updated_at = NOW() WHERE id = :id AND user_id = :uid");
+                $stmtDelete = $pdo->prepare("DELETE FROM daily_work_logs WHERE id = :id AND user_id = :uid");
+
+                foreach ($logs_update as $id => $data) {
+                    $activity = trim($data['activity'] ?? '');
+                    $category_id = $data['category_id'] ?? '';
                     $cat_db = ($category_id !== '' && isset($allowedCatIds[(string)$category_id])) ? (int)$category_id : null;
-                    $stmtCheck->execute([':uid' => $user['id'], ':wdate' => $work_date, ':sh' => $h]);
-                    $existingRow = $stmtCheck->fetch(PDO::FETCH_ASSOC);
-                    if ($existingRow) {
-                        if ($activity === '') $stmtDelete->execute([':id' => $existingRow['id']]);
-                        else $stmtUpdate->execute([':detail' => $activity, ':catid' => $cat_db, ':id' => $existingRow['id']]);
+
+                    if ($activity === '') {
+                        // ถ้าเคลียร์ข้อความ = ลบทิ้ง
+                        $stmtDelete->execute([':id' => $id, ':uid' => $user['id']]);
                     } else {
-                        if ($activity !== '') {
-                            $stmtInsert->execute([':uid' => $user['id'], ':wdate' => $work_date, ':stime' => sprintf("%02d:00:00", $h), ':etime' => sprintf("%02d:00:00", $h + 1), ':detail' => $activity, ':catid' => $cat_db]);
-                        }
+                        // ถ้ามีข้อความ = อัปเดต
+                        $stmtUpdate->execute([
+                            ':detail' => $activity,
+                            ':catid'  => $cat_db,
+                            ':id'     => $id,
+                            ':uid'    => $user['id']
+                        ]);
                     }
                 }
+
+                // 2. จัดการรายการใหม่ (Insert)
+                // ✅ แก้ไข: ลบ start_hour และ :sh ออกจากคำสั่ง SQL
+                $stmtInsert = $pdo->prepare("INSERT INTO daily_work_logs (user_id, work_date, start_time, end_time, activity_detail, category_id) VALUES (:uid, :wdate, :stime, :etime, :detail, :catid)");
+
+                foreach ($logs_new as $timeKey => $data) {
+                    $activity = trim($data['activity'] ?? '');
+                    if ($activity === '') continue; // ข้ามถ้าไม่ได้กรอก
+
+                    $category_id = $data['category_id'] ?? '';
+                    $cat_db = ($category_id !== '' && isset($allowedCatIds[(string)$category_id])) ? (int)$category_id : null;
+
+                    // แปลง Key เวลา
+                    $hour = 0; $min = 0;
+                    if (strpos($timeKey, '_30') !== false) {
+                        $parts = explode('_', $timeKey);
+                        $hour = (int)$parts[0];
+                        $min = 30;
+                    } else {
+                        $hour = (int)$timeKey;
+                        $min = 0;
+                    }
+
+                    $startTimeStr = sprintf("%02d:%02d:00", $hour, $min);
+                    $endTimeStr = date('H:i:s', strtotime("$startTimeStr +1 hour")); 
+
+                    $stmtInsert->execute([
+                        ':uid'    => $user['id'],
+                        ':wdate'  => $work_date,
+                        ':stime'  => $startTimeStr,
+                        ':etime'  => $endTimeStr,
+                        ':detail' => $activity,
+                        ':catid'  => $cat_db
+                        // ✅ แก้ไข: ลบ ':sh' => $hour ออก เพราะ Database จะคำนวณเอง
+                    ]);
+                }
+
                 $pdo->commit();
                 $message = "✅ บันทึกข้อมูลสำเร็จ";
             }
@@ -76,6 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
         }
     }
 }
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_calendar'])) {
     if (!$isLoggedIn) die("Access Denied");
     $c_date = $_POST['work_date'];
@@ -141,7 +186,6 @@ if (isset($pdo)) {
     $stmt_log->execute($params_table);
 
     while ($row = $stmt_log->fetch(PDO::FETCH_ASSOC)) {
-
         if (!empty($row['start_time'])) {
             [$hh, $mm] = explode(':', $row['start_time']);
             $h = (int)$hh;
@@ -153,13 +197,11 @@ if (isset($pdo)) {
 
         if ($h <= 0) continue;
 
-        $keyHour = (string)$h;
-        $existing_logs[$keyHour][] = $row;
+        // สร้าง Key เดียวที่แม่นยำ
+        // ถ้านาทีเป็น 30 ให้ใช้ key '8_30' ถ้านาทีเป็น 0 ให้ใช้ key '8'
+        $keyHour = ($m === 30) ? $h . '_30' : (string)$h;
 
-        if ($m > 0) {
-            $halfKey = $h . '_30';
-            $existing_logs[$halfKey][] = $row;
-        }
+        $existing_logs[$keyHour][] = $row;
     }
 
 
@@ -184,13 +226,8 @@ if (isset($pdo)) {
             $creatorName = !empty($log['display_th']) ? $log['display_th'] : 'User #' . $log['user_id'];
             $displayTitle = $log['activity_detail'] . " [$creatorName]";
 
-            // ✅ 2. คำนวณสีตาม User ID (Logic ที่ขอมา)
-            // เอา user_id มาแปลงเป็นตัวเลข (int)
             $userId = intval($log['user_id']);
 
-            // หา index ของสี โดยการหารเอาเศษ (Modulo) กับจำนวนสีทั้งหมด
-            // ผลลัพธ์จะได้เลขตั้งแต่ 0 ถึง 11 (ตามจำนวนสีใน $userPalette)
-            // User 1 -> index 1, User 13 -> index 1 (สีเดิมวนลูป)
             $colorIndex = $userId % count($userPalette);
 
             // ดึงค่าสีออกมา
@@ -215,8 +252,6 @@ if (isset($pdo)) {
         }
     }
 }
-
-var_dump($existing_logs);
 
 if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันทึกข้อมูลเรียบร้อยแล้ว";
 ?>
@@ -332,26 +367,26 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                     $logsInHour = $existing_logs[$h] ?? [];
                                     $isHalf = str_contains($h, '_30');
 
-                                    // ✅ แก้ไข: กรองข้อมูลเพื่อแก้ปัญหาซ้ำ
-                                    // ถ้าเป็นช่องชั่วโมงหลัก (เช่น 8, 9) ให้เอาเฉพาะงานที่เริ่มนาทีที่ :00 เท่านั้น
+                                    // Filter: ถ้าเป็นชั่วโมงหลัก (8,9..) เอาเฉพาะงานที่นาทีเป็น 0
+                                    // แต่ถ้ามีหลายงานที่นาทีเป็น 0 เหมือนกัน มันจะมาครบทั้งหมดใน Array นี้
                                     if (!$isHalf) {
                                         $logsInHour = array_filter($logsInHour, function ($row) {
-                                            if (empty($row['start_time'])) return true; // ถ้าไม่มีเวลา (Log เก่า) ให้แสดง
+                                            if (empty($row['start_time'])) return true;
                                             $parts = explode(':', $row['start_time']);
-                                            return isset($parts[1]) && (int)$parts[1] === 0; // แสดงเฉพาะที่นาทีเป็น 0
+                                            return isset($parts[1]) && (int)$parts[1] === 0;
                                         });
-                                        $logsInHour = array_values($logsInHour); // เรียง index ใหม่
+                                        $logsInHour = array_values($logsInHour);
                                     }
 
-                                    $myLog = $logsInHour[0] ?? [];
+                                    // แยกข้อมูล: ตัวแรกเอาไว้ใส่ Input, ตัวที่เหลือเอาไว้แสดงผลเฉยๆ
+                                    $mainLog = $logsInHour[0] ?? [];
+                                    $extraLogs = array_slice($logsInHour, 1);
 
-                                    // --- LOGIC คำนวณเวลาที่จะแสดง ---
-                                    if (!empty($myLog['start_time'])) {
-                                        // ถ้ามีข้อมูล ใช้เวลาจริงจาก DB
-                                        $showStart = date('H:i', strtotime($myLog['start_time']));
-                                        $showEnd = !empty($myLog['end_time']) ? date('H:i', strtotime($myLog['end_time'])) : sprintf("%02d:00", intval($h) + 1);
+                                    // --- LOGIC คำนวณเวลาที่จะแสดง (อิงจากตัวแรก) ---
+                                    if (!empty($mainLog['start_time'])) {
+                                        $showStart = date('H:i', strtotime($mainLog['start_time']));
+                                        $showEnd = !empty($mainLog['end_time']) ? date('H:i', strtotime($mainLog['end_time'])) : sprintf("%02d:00", intval($h) + 1);
                                     } else {
-                                        // ถ้าไม่มีข้อมูล (ช่องว่าง) ให้ใช้เวลา Default ตาม Slot
                                         $val = intval($h);
                                         if ($isHalf) {
                                             $showStart = sprintf("%02d:30", $val);
@@ -362,15 +397,14 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
                                         }
                                     }
 
-                                    // สลับสีพื้นหลัง
-                                    $rowClass = ($index % 2 == 0) ? 'bg-white' : 'bg-slate-100/60';
+                                    $rowClass = ($index % 2 == 0) ? 'bg-white' : 'bg-slate-50/60';
                                 ?>
                                     <tr class="<?= $rowClass ?> hover:bg-indigo-50/40 transition-colors group">
 
                                         <td class="px-6 py-5 align-top border-r border-slate-100">
                                             <div class="flex flex-col items-start justify-center h-full pt-1">
                                                 <div class="flex items-center gap-2">
-                                                    <div class="w-2 h-2 rounded-full bg-slate-300"></div>
+                                                    <div class="w-2 h-2 rounded-full <?= !empty($mainLog) ? 'bg-indigo-500 ring-4 ring-indigo-100' : 'bg-slate-300' ?>"></div>
                                                     <span class="text-lg font-bold text-slate-700 font-mono tracking-tight">
                                                         <?= $showStart ?>
                                                     </span>
@@ -389,98 +423,67 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'saved') $message = "✅ บันท
 
                                         <td class="px-6 py-4 align-top">
                                             <?php if ($isLoggedIn): ?>
-                                                <div class="relative">
-                                                    <?php if (!$isHalf): ?>
-                                                        <textarea
-                                                            name="logs[<?= $h ?>][activity]"
-                                                            rows="2"
-                                                            placeholder="ระบุรายละเอียดงาน..."
-                                                            class="w-full border-0 bg-transparent p-0 text-slate-800 placeholder:text-slate-300 focus:ring-0 focus:border-indigo-500 sm:text-sm resize-none leading-relaxed"><?= htmlspecialchars($myLog['activity_detail'] ?? '') ?></textarea>
-                                                        <div class="absolute bottom-0 left-0 right-0 h-px bg-slate-200 group-hover:bg-indigo-200 transition-colors"></div>
-                                                    <?php else: ?>
-                                                        <div class="relative group/tooltip">
-                                                            <textarea
-                                                                disabled
-                                                                rows="2"
-                                                                class="w-full border-0 bg-transparent p-0 text-slate-600 sm:text-sm resize-none leading-relaxed cursor-default select-text"><?= htmlspecialchars($myLog['activity_detail'] ?? '') ?></textarea>
-                                                            <div class="absolute top-0 right-0 opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
-                                                                <span class="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-full">แก้ไขที่มุมมองปฏิทิน</span>
-                                                            </div>
-                                                        </div>
-                                                        <div class="absolute bottom-0 left-0 right-0 h-px bg-slate-200 border-dashed"></div>
-                                                    <?php endif; ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <?php if (empty($logsInHour)): ?>
-                                                    <span class="text-slate-300 text-sm italic font-light">- ว่าง -</span>
-                                                <?php else: ?>
-                                                    <div class="flex flex-col gap-3">
+                                                <div class="flex flex-col gap-4">
+
+                                                    <?php if (!empty($logsInHour)): ?>
                                                         <?php foreach ($logsInHour as $entry): ?>
-                                                            <div class="bg-white border border-slate-100 p-3 rounded-lg shadow-sm">
-                                                                <div class="flex items-center gap-2 mb-1">
-                                                                    <div class="flex items-center gap-1 text-xs text-indigo-600 font-bold uppercase tracking-wider">
-                                                                        โดย: <?= htmlspecialchars($entry['display_th']) ?>
-                                                                    </div>
-                                                                </div>
-                                                                <p class="text-sm text-slate-700 break-words leading-relaxed">
-                                                                    <?= htmlspecialchars($entry['activity_detail']) ?>
-                                                                </p>
+                                                            <div class="relative w-full">
+                                                                <textarea
+                                                                    name="logs_update[<?= $entry['id'] ?>][activity]"
+                                                                    rows="2"
+                                                                    class="w-full border-0 bg-transparent p-0 text-slate-800 placeholder:text-slate-300 focus:ring-0 focus:border-indigo-500 sm:text-sm resize-none leading-relaxed"><?= htmlspecialchars($entry['activity_detail']) ?></textarea>
+                                                                <div class="absolute bottom-0 left-0 right-0 h-px bg-slate-200 group-hover:bg-indigo-200 transition-colors"></div>
                                                             </div>
                                                         <?php endforeach; ?>
-                                                    </div>
-                                                <?php endif; ?>
+
+                                                    <?php else: ?>
+                                                        <div class="relative w-full">
+                                                            <textarea
+                                                                name="logs_new[<?= $h ?>][activity]"
+                                                                rows="2"
+                                                                placeholder="ระบุรายละเอียดงาน..."
+                                                                class="w-full border-0 bg-transparent p-0 text-slate-800 placeholder:text-slate-300 focus:ring-0 focus:border-indigo-500 sm:text-sm resize-none leading-relaxed"></textarea>
+                                                            <div class="absolute bottom-0 left-0 right-0 h-px bg-slate-200 group-hover:bg-indigo-200 transition-colors"></div>
+                                                        </div>
+                                                    <?php endif; ?>
+
+                                                </div>
+                                            <?php else: ?>
                                             <?php endif; ?>
                                         </td>
 
                                         <td class="px-6 py-4 align-top">
                                             <?php if ($isLoggedIn): ?>
-                                                <?php if (!$isHalf): ?>
-                                                    <div class="relative">
-                                                        <select name="logs[<?= $h ?>][category_id]" class="w-full bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 transition-all hover:bg-white hover:shadow-sm">
-                                                            <option value="">-- หมวดหมู่ --</option>
-                                                            <?php foreach ($categories as $cat): ?>
-                                                                <option value="<?= $cat['id'] ?>" <?= (($myLog['category_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>>
-                                                                    <?= $cat['name_th'] ?>
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <?php if (!empty($myLog['category_id'])): ?>
-                                                        <?php
-                                                        $catName = '-';
-                                                        foreach ($categories as $c) {
-                                                            if ($c['id'] == $myLog['category_id']) {
-                                                                $catName = $c['name_th'];
-                                                                break;
-                                                            }
-                                                        }
-                                                        ?>
-                                                        <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                                            <?= $catName ?>
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <span class="text-slate-300 text-sm">-</span>
-                                                    <?php endif; ?>
-                                                <?php endif; ?>
-                                            <?php else: ?>
-                                                <?php if (!empty($logsInHour)): ?>
-                                                    <div class="flex flex-col gap-2 mt-1">
+                                                <div class="flex flex-col gap-4">
+
+                                                    <?php if (!empty($logsInHour)): ?>
                                                         <?php foreach ($logsInHour as $entry): ?>
-                                                            <div>
-                                                                <?php if (!empty($entry['category_name'])): ?>
-                                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                                                        <?= htmlspecialchars($entry['category_name']) ?>
-                                                                    </span>
-                                                                <?php else: ?>
-                                                                    <span class="text-slate-300 text-xs">-</span>
-                                                                <?php endif; ?>
+                                                            <div class="relative pt-1 h-[3.5rem] flex items-start"> <select name="logs_update[<?= $entry['id'] ?>][category_id]" class="w-full bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 transition-all hover:bg-white hover:shadow-sm">
+                                                                    <option value="">-- หมวดหมู่ --</option>
+                                                                    <?php foreach ($categories as $cat): ?>
+                                                                        <option value="<?= $cat['id'] ?>" <?= (($entry['category_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>>
+                                                                            <?= $cat['name_th'] ?>
+                                                                        </option>
+                                                                    <?php endforeach; ?>
+                                                                </select>
                                                             </div>
                                                         <?php endforeach; ?>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <span class="text-slate-300 text-sm">-</span>
-                                                <?php endif; ?>
+
+                                                    <?php else: ?>
+                                                        <div class="relative pt-1">
+                                                            <select name="logs_new[<?= $h ?>][category_id]" class="w-full bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 transition-all hover:bg-white hover:shadow-sm">
+                                                                <option value="">-- หมวดหมู่ --</option>
+                                                                <?php foreach ($categories as $cat): ?>
+                                                                    <option value="<?= $cat['id'] ?>">
+                                                                        <?= $cat['name_th'] ?>
+                                                                    </option>
+                                                                <?php endforeach; ?>
+                                                            </select>
+                                                        </div>
+                                                    <?php endif; ?>
+
+                                                </div>
+                                            <?php else: ?>
                                             <?php endif; ?>
                                         </td>
                                     </tr>

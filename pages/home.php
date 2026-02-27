@@ -14,7 +14,6 @@ curl_setopt_array($ch, [
 $response = curl_exec($ch);
 $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlErr  = curl_error($ch);
-curl_close($ch);
 
 $reports = [];
 if ($response !== false && $httpCode === 200) {
@@ -23,7 +22,7 @@ if ($response !== false && $httpCode === 200) {
         $reports = $data['reports'] ?? [];
     }
 }
-
+var_dump($reports);
 $statistics = getStatusStatistics();
 
 ?>
@@ -361,7 +360,7 @@ $statistics = getStatusStatistics();
                     <!-- Recent Tickets -->
                     <div class="bg-white rounded-xl shadow-md p-6">
                         <div class="flex items-center justify-between mb-6">
-                            <h2 class="text-2xl font-bold text-gray-800">บันทึกงานประจำวันล่าสุด</h2>
+                            <h2 class="text-2xl font-bold text-gray-800">รายการแจ้งปัญหา/บริการ ประจำวัน</h2>
                             <a href="./?page=daily-works" class="text-blue-600 hover:text-blue-700 font-medium flex items-center">
                                 ดูทั้งหมด
                                 <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

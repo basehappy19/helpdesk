@@ -131,7 +131,7 @@
                                     <span>หน่วยงาน</span>
                                     <span class="text-red-500 ml-1">*</span>
                                 </label>
-                                <input type="text" name="department" placeholder="เช่น สำนักคอมพิวเตอร์"
+                                <input type="text" name="department" placeholder="เช่น OPD ตา"
                                     class="input-focus w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200">
                             </div>
 
@@ -140,7 +140,7 @@
                                     <span>อาคาร</span>
                                     <span class="text-red-500 ml-1">*</span>
                                 </label>
-                                <input type="text" name="building" placeholder="เช่น อาคาร A"
+                                <input type="text" name="building" placeholder="เช่น เลิศประชารักษ์"
                                     class="input-focus w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200">
                             </div>
 
@@ -149,7 +149,7 @@
                                     <span>ชั้น</span>
                                     <span class="text-red-500 ml-1">*</span>
                                 </label>
-                                <input type="text" name="floor" placeholder="เช่น ชั้น 3"
+                                <input type="text" name="floor" placeholder="เช่น ชั้น 2"
                                     class="input-focus w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200">
                             </div>
 
@@ -158,7 +158,7 @@
                                     <span>จุดบริการ</span>
                                     <span class="text-red-500 ml-1">*</span>
                                 </label>
-                                <input type="text" name="service_point" placeholder="เช่น ห้อง 301"
+                                <input type="text" name="service_point" placeholder="เช่น ห้องตรวจ 1"
                                     class="input-focus w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200">
                             </div>
                         </div>
@@ -188,9 +188,8 @@
                             <div class="space-y-2">
                                 <label class="flex items-center text-sm font-medium text-gray-700">
                                     <span>เบอร์โทรศัพท์</span>
-                                    <span class="text-red-500 ml-1">*</span>
                                 </label>
-                                <input type="tel" name="phone" placeholder="เช่น 081-234-5678"
+                                <input type="tel" name="phone" placeholder="1234"
                                     class="input-focus w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200">
                             </div>
                         </div>
@@ -343,10 +342,6 @@
                 enable(issueSymptomOther, false);
                 requireField(issueSymptomOther, false);
                 issueSymptomOther.value = '';
-            }
-
-            function validatePhoneTH(p) {
-                return /^0?\d{9,10}$/.test(String(p).replace(/\D/g, ''));
             }
 
             show(categoryGroup, false);
@@ -589,8 +584,6 @@
                 if (!flr) return showError("กรุณาระบุชั้น", form.querySelector("[name='floor']"));
                 if (!serv) return showError("กรุณาระบุจุดบริการ", form.querySelector("[name='service_point']"));
                 if (!rep) return showError("กรุณาระบุชื่อผู้แจ้ง", form.querySelector("[name='reporter']"));
-                if (!phone) return showError("กรุณาระบุเบอร์โทรศัพท์", form.querySelector("[name='phone']"));
-                if (!validatePhoneTH(phone)) return showError("รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง", form.querySelector("[name='phone']"));
 
                 return true;
             }

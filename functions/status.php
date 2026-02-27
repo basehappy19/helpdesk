@@ -80,6 +80,6 @@ function latest_status(array $ticket): ?array
 
     return [
         'name'  => $latest['to_status_name'] ?? '-',
-        'style' => $latest['status_to_style'] ?? '',
+        'style' => $latest['to_status_style'] ?? '',
     ];
 }

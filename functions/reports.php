@@ -199,7 +199,7 @@ function getAllReports(int $limit = 50, int $offset = 0, array $filters = []): a
                 'from_status_name'   => $log['from_status_name'],
                 'to_status_name'     => $log['to_status_name'],
                 'status_from_style'  => $log['status_from_style'],
-                'status_to_style'    => $log['status_to_style'], 
+                'to_status_style'    => $log['status_to_style'], 
             ];
         }
     }

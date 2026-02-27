@@ -175,3 +175,83 @@ function getAllReports(int $limit = 50, int $offset = 0): array {
 
     return array_values($reports);
 }
+
+function getReportDetails(int $id): ?array {
+    global $pdo;
+
+    $sql = "
+        SELECT
+            r.id,
+            r.code,
+            r.created_at,
+            r.department,
+            r.reporter_name,
+            rt.name_th      AS request_type_name,
+            ct.name_th      AS category_name,
+            st.name_th      AS symptom_name,
+
+            sl.id           AS status_log_id,
+            sl.symptom      AS status_symptom,
+            sl.cause        AS status_cause,
+            sl.solver_by    AS status_solver_by,
+            sl.sla          AS status_sla,
+            sl.changed_at   AS status_changed_at,
+            s_from.name_th  AS from_status_name,
+            s_to.name_th    AS to_status_name,
+            s_from.style    AS status_from_style,
+            s_to.style      AS status_to_style
+        FROM tickets AS r
+            LEFT JOIN request_types      AS rt     ON r.request_type_id = rt.id
+            LEFT JOIN issue_categories   AS ct     ON r.category_id     = ct.id
+            LEFT JOIN issue_symptoms     AS st     ON r.symptom_id      = st.id
+            LEFT JOIN ticket_status_logs AS sl     ON sl.ticket_id      = r.id
+            LEFT JOIN ticket_statuses    AS s_from ON s_from.id         = sl.from_status
+            LEFT JOIN ticket_statuses    AS s_to   ON s_to.id           = sl.to_status
+        WHERE r.id = :id
+        ORDER BY sl.changed_at DESC, sl.id DESC
+    ";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['id' => $id]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // ถ้าไม่พบข้อมูล ให้คืนค่า null กลับไป
+    if (!$rows) {
+        return null;
+    }
+
+    $first = $rows[0];
+
+    // โครงสร้างข้อมูลหลักของ Ticket
+    $work = [
+        'id'                 => (int)$first['id'],
+        'code'               => $first['code'],
+        'created_at'         => $first['created_at'],
+        'department'         => $first['department'],
+        'reporter_name'      => $first['reporter_name'],
+        'request_type_name'  => $first['request_type_name'],
+        'category_name'      => $first['category_name'],
+        'symptom_name'       => $first['symptom_name'],
+        'ticket_status_logs' => [],
+    ];
+
+    // วนลูปเพื่อนำ Status Logs ทั้งหมดใส่เข้าไปใน Array (เรียงจากใหม่ไปเก่าตาม SQL)
+    foreach ($rows as $row) {
+        if (!is_null($row['status_log_id'])) {
+            $work['ticket_status_logs'][] = [
+                'id'                 => (int)$row['status_log_id'],
+                'status_changed_at'  => $row['status_changed_at'],
+                'from_status_name'   => $row['from_status_name'],
+                'to_status_name'     => $row['to_status_name'],
+                'status_from_style'  => $row['status_from_style'],
+                'status_to_style'    => $row['status_to_style'],
+                'symptom'            => $row['status_symptom'],
+                'cause'              => $row['status_cause'],
+                'solver_by'          => $row['status_solver_by'],
+                'sla'                => $row['status_sla'],
+            ];
+        }
+    }
+
+    return $work;
+}

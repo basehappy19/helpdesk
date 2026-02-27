@@ -1,34 +1,20 @@
 <?php
 require __DIR__ . "../../functions/status.php";
-$statuses = getStatuses();
-$work = null;
 
-if (isset($_GET['id'])) {
-    $workId = $_GET['id'];
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'];
+require_once __DIR__ . "../../functions/reports.php";
 
-    $apiUrl = $scheme . '://' . $host . '/api/works/get_work.php?id=' . urlencode((string)$workId);
+$ticketId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-    $ch = curl_init($apiUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Accept: application/json',
-    ]);
+if ($ticketId <= 0) {
+    header('Location: ./?page=daily-works');
+    exit;
+}
 
-    $response = curl_exec($ch);
-    $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+$reportDetails = getReportDetails($ticketId);
 
-    if ($response !== false && $httpCode === 200) {
-        $data = json_decode($response, true);
-
-        if (json_last_error() === JSON_ERROR_NONE && !empty($data['ok'])) {
-            $work = $data['work'] ?? null;
-        }
-    }
-} else {
-    die('work ID is required.');
+if ($reportDetails === null) {
+    echo "ไม่พบข้อมูลรายการแจ้งปัญหานี้";
+    exit;
 }
 
 ?>
@@ -39,7 +25,7 @@ if (isset($_GET['id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>รายละเอียดงาน #<?= htmlspecialchars($work['code'] ?? '') ?> | HelpDesk</title>
+    <title>รายละเอียดปัญหา #<?= htmlspecialchars($reportDetails['code'] ?? '') ?> | HelpDesk</title>
     <?php include './lib/style.php'; ?>
 </head>
 
@@ -52,7 +38,7 @@ if (isset($_GET['id'])) {
 
             <!-- Header Section -->
             <div class="mb-6">
-                <a href="./?page=daily-works" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors mb-4">
+                <a href="./?page=reports" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors mb-4">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                     </svg>
@@ -60,18 +46,18 @@ if (isset($_GET['id'])) {
                 </a>
             </div>
 
-            <?php if ($work): ?>
+            <?php if ($reportDetails): ?>
 
                 <!-- Ticket Code Card -->
                 <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-xl p-8 mb-6 text-white">
                     <div class="flex items-center justify-between flex-wrap gap-4">
                         <div>
-                            <p class="text-indigo-100 text-sm mb-1">รหัสงาน</p>
-                            <h1 class="text-3xl md:text-4xl font-bold"><?= htmlspecialchars($work['code'] ?? '') ?></h1>
+                            <p class="text-indigo-100 text-sm mb-1">รหัสปัญหา</p>
+                            <h1 class="text-3xl md:text-4xl font-bold"><?= htmlspecialchars($reportDetails['code'] ?? '') ?></h1>
                         </div>
                         <div class="text-right">
                             <p class="text-indigo-100 text-sm mb-1">หมายเลขอ้างอิง</p>
-                            <p class="text-2xl font-semibold">#<?= htmlspecialchars($work['id'] ?? '') ?></p>
+                            <p class="text-2xl font-semibold">#<?= htmlspecialchars($reportDetails['id'] ?? '') ?></p>
                         </div>
                     </div>
                 </div>
@@ -89,7 +75,7 @@ if (isset($_GET['id'])) {
                                     <svg class="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
-                                    รายละเอียดการแจ้งงาน
+                                    รายละเอียดการแจ้งปัญหา
                                 </h2>
                             </div>
 
@@ -103,7 +89,7 @@ if (isset($_GET['id'])) {
                                     </div>
                                     <div class="flex-grow">
                                         <p class="text-sm font-medium text-gray-500 mb-1">แผนก</p>
-                                        <p class="text-lg text-gray-800 font-medium"><?= htmlspecialchars($work['department'] ?? '-') ?></p>
+                                        <p class="text-lg text-gray-800 font-medium"><?= htmlspecialchars($reportDetails['department'] ?? '-') ?></p>
                                     </div>
                                 </div>
 
@@ -115,7 +101,7 @@ if (isset($_GET['id'])) {
                                     </div>
                                     <div class="flex-grow">
                                         <p class="text-sm font-medium text-gray-500 mb-1">ผู้แจ้ง</p>
-                                        <p class="text-lg text-gray-800 font-medium"><?= htmlspecialchars($work['reporter_name'] ?? '-') ?></p>
+                                        <p class="text-lg text-gray-800 font-medium"><?= htmlspecialchars($reportDetails['reporter_name'] ?? '-') ?></p>
                                     </div>
                                 </div>
 
@@ -128,7 +114,7 @@ if (isset($_GET['id'])) {
                                                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                                                 </svg>
-                                                <?= htmlspecialchars($work['request_type_name'] ?? '-') ?>
+                                                <?= htmlspecialchars($reportDetails['request_type_name'] ?? '-') ?>
                                             </span>
                                         </div>
 
@@ -138,7 +124,7 @@ if (isset($_GET['id'])) {
                                                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                                 </svg>
-                                                <?= htmlspecialchars($work['category_name'] ?? '-') ?>
+                                                <?= htmlspecialchars($reportDetails['category_name'] ?? '-') ?>
                                             </span>
                                         </div>
 
@@ -152,7 +138,7 @@ if (isset($_GET['id'])) {
                                         </svg>
                                         อาการ/ปัญหา
                                     </p>
-                                    <p class="text-base text-red-900 font-medium"><?= htmlspecialchars($work['symptom_name'] ?? '-') ?></p>
+                                    <p class="text-base text-red-900 font-medium"><?= htmlspecialchars($reportDetails['symptom_name'] ?? '-') ?></p>
                                 </div>
 
                             </div>
@@ -180,17 +166,17 @@ if (isset($_GET['id'])) {
                             </div>
 
                             <div class="p-6">
-                                <?php if (!empty($work['ticket_status_logs'])): ?>
+                                <?php if (!empty($reportDetails['ticket_status_logs'])): ?>
                                     <div class="relative">
                                         <!-- Timeline Line -->
                                         <div class="absolute left-5 top-0 bottom-0 w-0.5 bg-gradient-to-b from-indigo-200 to-purple-200"></div>
 
                                         <div class="space-y-6">
-                                            <?php foreach ($work['ticket_status_logs'] as $index => $log): ?>
+                                            <?php foreach ($reportDetails['ticket_status_logs'] as $index => $log): ?>
                                                 <div class="relative flex items-start group">
                                                     <!-- Timeline Dot -->
                                                     <div class="absolute left-0 w-10 h-10 bg-white border-4 border-indigo-500 rounded-full flex items-center justify-center z-10">
-                                                        <span class="text-xs font-bold text-indigo-600"><?= count($work['ticket_status_logs']) - $index ?></span>
+                                                        <span class="text-xs font-bold text-indigo-600"><?= count($reportDetails['ticket_status_logs']) - $index ?></span>
                                                     </div>
 
                                                     <!-- Content -->
@@ -283,10 +269,10 @@ if (isset($_GET['id'])) {
                             </div>
                             <div class="p-6">
                                 <p class="text-2xl font-bold text-gray-800 mb-1">
-                                    <?= formatDateThaiBuddhistWithOutTime($work['created_at']) ?>
+                                    <?= formatDateThaiBuddhistWithOutTime($reportDetails['created_at']) ?>
                                 </p>
                                 <p class="text-sm text-gray-500">
-                                    เวลา <?= date('H:i', strtotime($work['created_at'] ?? '')) ?> น.
+                                    เวลา <?= date('H:i', strtotime($reportDetails['created_at'] ?? '')) ?> น.
                                 </p>
                             </div>
                         </div>
@@ -302,12 +288,12 @@ if (isset($_GET['id'])) {
                             <div class="space-y-3">
                                 <div class="flex items-center justify-between py-2 border-b border-gray-100">
                                     <span class="text-sm text-gray-600">จำนวนการเปลี่ยนสถานะ</span>
-                                    <span class="font-semibold text-indigo-600"><?= count($work['ticket_status_logs'] ?? []) ?> ครั้ง</span>
+                                    <span class="font-semibold text-indigo-600"><?= count($reportDetails['ticket_status_logs'] ?? []) ?> ครั้ง</span>
                                 </div>
                                 <div class="flex items-center justify-between py-2">
                                     <span class="text-sm text-gray-600">สถานะล่าสุด</span>
                                     <?php
-                                    $latestStatus = $work['ticket_status_logs'][0] ?? null;
+                                    $latestStatus = $reportDetails['ticket_status_logs'][0] ?? null;
                                     if ($latestStatus):
                                     ?>
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium <?= htmlspecialchars($latestStatus['status_to_style'] ?? 'bg-gray-100 text-gray-800') ?>">
@@ -328,8 +314,8 @@ if (isset($_GET['id'])) {
                     <svg class="w-20 h-20 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <h2 class="text-2xl font-bold text-gray-800 mb-2">ไม่พบข้อมูลงาน</h2>
-                    <p class="text-gray-600 mb-6">ขออภัย ไม่สามารถดึงข้อมูลงานนี้ได้</p>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">ไม่พบข้อมูลปัญหา</h2>
+                    <p class="text-gray-600 mb-6">ขออภัย ไม่สามารถดึงข้อมูลปัญหานี้ได้</p>
                     <a href="index.php" class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -355,7 +341,7 @@ if (isset($_GET['id'])) {
                     </h3>
                 </div>
                 <form id="addStatusForm" class="p-6 space-y-4">
-                    <input type="hidden" name="work_id" value="<?= htmlspecialchars($work['id'] ?? '') ?>">
+                    <input type="hidden" name="work_id" value="<?= htmlspecialchars($reportDetails['id'] ?? '') ?>">
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">สถานะใหม่</label>

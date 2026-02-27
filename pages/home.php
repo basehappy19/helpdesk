@@ -1,28 +1,10 @@
 <?php
+require_once __DIR__ . "../../functions/reports.php";
 require_once __DIR__ . "../../functions/status.php";
 require_once __DIR__ . "../../functions/time.php";
 
-$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host = $_SERVER['HTTP_HOST'];
-$apiUrl = $scheme . '://' . $host . '/api/reports/get_recent_report.php';
 
-$ch = curl_init($apiUrl);
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 5,
-]);
-$response = curl_exec($ch);
-$httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curlErr  = curl_error($ch);
-
-$reports = [];
-if ($response !== false && $httpCode === 200) {
-    $data = json_decode($response, true);
-    if (json_last_error() === JSON_ERROR_NONE && !empty($data['ok'])) {
-        $reports = $data['reports'] ?? [];
-    }
-}
-var_dump($reports);
+$reports = getRecentReports(5);
 $statistics = getStatusStatistics();
 
 ?>

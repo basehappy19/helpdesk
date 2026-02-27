@@ -73,19 +73,54 @@ function getRecentReports(int $limit = 3): array {
     return array_values($byId);
 }
 
-function getTotalReportsCount(): int {
-    global $pdo;
-    $sql = "SELECT COUNT(id) FROM tickets";
-    $stmt = $pdo->query($sql);
-    return (int)$stmt->fetchColumn();
-}
-
-function getAllReports(int $limit = 50, int $offset = 0): array {
+/**
+ * ดึงข้อมูลตั๋ว (Tickets) พร้อมตัวกรอง
+ */
+function getAllReports(int $limit = 50, int $offset = 0, array $filters = []): array {
     global $pdo;
     
-    // ------------------------------------------------------------------
-    // ขั้นตอนที่ 1: ดึงข้อมูล Tickets หลัก (รองรับ Limit และ Offset สำหรับแบ่งหน้า)
-    // ------------------------------------------------------------------
+    // 1. สร้างเงื่อนไข WHERE แบบไดนามิก
+    $whereConditions = ["1=1"]; // ค่าเริ่มต้น (เผื่อไม่มี filter)
+    $params = [];
+
+    // ค้นหาข้อความ (ค้นจากรหัสตั๋ว หรือ ชื่อผู้แจ้ง)
+    if (!empty($filters['search'])) {
+        // เปลี่ยนชื่อ parameter ให้ไม่ซ้ำกัน
+        $whereConditions[] = "(r.code LIKE :search_code OR r.reporter_name LIKE :search_name)";
+        $params[':search_code'] = '%' . $filters['search'] . '%';
+        $params[':search_name'] = '%' . $filters['search'] . '%';
+    }
+    // กรองประเภทงาน
+    if (!empty($filters['rt'])) {
+        $whereConditions[] = "r.request_type_id = :rt";
+        $params[':rt'] = $filters['rt'];
+    }
+    // กรองหมวดหมู่
+    if (!empty($filters['cat'])) {
+        $whereConditions[] = "r.category_id = :cat";
+        $params[':cat'] = $filters['cat'];
+    }
+    // กรองอาการ
+    if (!empty($filters['sym'])) {
+        $whereConditions[] = "r.symptom_id = :sym";
+        $params[':sym'] = $filters['sym'];
+    }
+    // กรองสถานะ (ใช้ Subquery เพื่อหาสถานะล่าสุดของตั๋วใบนั้น)
+    if (!empty($filters['status'])) {
+        $whereConditions[] = "(
+            SELECT ts.code 
+            FROM ticket_status_logs tsl 
+            LEFT JOIN ticket_statuses ts ON tsl.to_status = ts.id 
+            WHERE tsl.ticket_id = r.id 
+            ORDER BY tsl.changed_at DESC, tsl.id DESC 
+            LIMIT 1
+        ) = :status";
+        $params[':status'] = $filters['status'];
+    }
+
+    $whereSql = implode(" AND ", $whereConditions);
+
+    // 2. ดึงข้อมูล Tickets หลัก
     $sqlTickets = "
         SELECT
             r.id,
@@ -100,40 +135,40 @@ function getAllReports(int $limit = 50, int $offset = 0): array {
             LEFT JOIN request_types      AS rt ON r.request_type_id = rt.id
             LEFT JOIN issue_categories   AS ct ON r.category_id     = ct.id
             LEFT JOIN issue_symptoms     AS st ON r.symptom_id      = st.id
+        WHERE {$whereSql}
         ORDER BY r.created_at DESC
         LIMIT :limit OFFSET :offset
     ";
 
     $stmt = $pdo->prepare($sqlTickets);
-    // Bind ค่าแบบ Integer ป้องกัน Error และ SQL Injection
+    
+    // Bind ตัวแปรสำหรับ Filters
+    foreach ($params as $key => $val) {
+        $stmt->bindValue($key, $val);
+    }
+    // Bind ตัวแปรสำหรับ Pagination
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-    $stmt->execute();
     
+    $stmt->execute();
     $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (empty($tickets)) {
-        return []; // ถ้าไม่มีข้อมูลเลย ให้คืนค่า Array ว่าง
+        return [];
     }
 
-    // สร้าง Array เตรียมเก็บข้อมูลโดยใช้ ID เป็น Key เพื่อให้ค้นหา/ประกอบร่างได้ง่าย
     $reports = [];
     $ticketIds = [];
     foreach ($tickets as $ticket) {
         $id = (int)$ticket['id'];
         $ticketIds[] = $id;
-        
         $ticket['id'] = $id;
-        $ticket['ticket_status_logs'] = []; // เตรียมช่องว่างสำหรับใส่ Logs
+        $ticket['ticket_status_logs'] = [];
         $reports[$id] = $ticket;
     }
 
-    // ------------------------------------------------------------------
-    // ขั้นตอนที่ 2: ดึงประวัติสถานะ (Logs) เฉพาะตั๋วที่ดึงมาได้ในขั้นที่ 1
-    // ------------------------------------------------------------------
-    // สร้างเครื่องหมาย ? ตามจำนวน Ticket IDs เช่น (?, ?, ?)
+    // 3. ดึงประวัติสถานะ (Logs) เฉพาะตั๋วที่ได้
     $placeholders = implode(',', array_fill(0, count($ticketIds), '?'));
-    
     $sqlLogs = "
         SELECT
             sl.ticket_id,
@@ -154,26 +189,71 @@ function getAllReports(int $limit = 50, int $offset = 0): array {
     $stmtLogs->execute($ticketIds);
     $logs = $stmtLogs->fetchAll(PDO::FETCH_ASSOC);
 
-    // ------------------------------------------------------------------
-    // ขั้นตอนที่ 3: ประกอบร่าง Logs เข้ากับ Tickets
-    // ------------------------------------------------------------------
+    // ประกอบร่าง Logs
     foreach ($logs as $log) {
         $tId = (int)$log['ticket_id'];
-        
-        // ถ้าตั๋วใบนี้มี log นีั และ log ใน array ยังไม่เกิน 3 อัน
         if (isset($reports[$tId]) && count($reports[$tId]['ticket_status_logs']) < 3) {
             $reports[$tId]['ticket_status_logs'][] = [
                 'id'                 => (int)$log['status_log_id'],
                 'status_changed_at'  => $log['status_changed_at'],
                 'from_status_name'   => $log['from_status_name'],
                 'to_status_name'     => $log['to_status_name'],
-                'from_status_style'  => $log['status_from_style'],
-                'to_status_style'    => $log['status_to_style'], 
+                'status_from_style'  => $log['status_from_style'],
+                'status_to_style'    => $log['status_to_style'], 
             ];
         }
     }
 
     return array_values($reports);
+}
+
+/**
+ * นับจำนวนตั๋วทั้งหมด (โดยใช้ตัวกรองชุดเดียวกัน)
+ */
+function getTotalReportsCount(array $filters = []): int {
+    global $pdo;
+
+    $whereConditions = ["1=1"];
+    $params = [];
+
+    // ค้นหาข้อความ (ค้นจากรหัสตั๋ว หรือ ชื่อผู้แจ้ง)
+    if (!empty($filters['search'])) {
+        // เปลี่ยนชื่อ parameter ให้ไม่ซ้ำกัน
+        $whereConditions[] = "(r.code LIKE :search_code OR r.reporter_name LIKE :search_name)";
+        $params[':search_code'] = '%' . $filters['search'] . '%';
+        $params[':search_name'] = '%' . $filters['search'] . '%';
+    }
+    if (!empty($filters['rt'])) {
+        $whereConditions[] = "r.request_type_id = :rt";
+        $params[':rt'] = $filters['rt'];
+    }
+    if (!empty($filters['cat'])) {
+        $whereConditions[] = "r.category_id = :cat";
+        $params[':cat'] = $filters['cat'];
+    }
+    if (!empty($filters['sym'])) {
+        $whereConditions[] = "r.symptom_id = :sym";
+        $params[':sym'] = $filters['sym'];
+    }
+    if (!empty($filters['status'])) {
+        $whereConditions[] = "(
+            SELECT ts.code 
+            FROM ticket_status_logs tsl 
+            LEFT JOIN ticket_statuses ts ON tsl.to_status = ts.id 
+            WHERE tsl.ticket_id = r.id 
+            ORDER BY tsl.changed_at DESC, tsl.id DESC 
+            LIMIT 1
+        ) = :status";
+        $params[':status'] = $filters['status'];
+    }
+
+    $whereSql = implode(" AND ", $whereConditions);
+
+    $sql = "SELECT COUNT(r.id) FROM tickets AS r WHERE {$whereSql}";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    
+    return (int)$stmt->fetchColumn();
 }
 
 function getReportDetails(int $id): ?array {

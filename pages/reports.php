@@ -3,15 +3,34 @@ require_once __DIR__ . "../../functions/reports.php";
 require_once __DIR__ . "../../functions/status.php";
 require_once __DIR__ . "../../functions/time.php";
 
+// รับค่าจาก URL (Filter Parameters)
+$filters = [
+    'search' => trim($_GET['search'] ?? ''),
+    'status' => trim($_GET['status'] ?? ''),
+    'rt'     => trim($_GET['rt'] ?? ''),
+    'cat'    => trim($_GET['cat'] ?? ''),
+    'sym'    => trim($_GET['sym'] ?? '')
+];
+
 // --- ตั้งค่าระบบ Pagination ---
 $limit = 20; // จำนวนรายการต่อหน้า
 $page = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
 $offset = ($page - 1) * $limit;
 
-// ดึงข้อมูลและจำนวนทั้งหมด
-$reports = getAllReports($limit, $offset);
-$totalReports = getTotalReportsCount();
+// ดึงข้อมูลและจำนวนทั้งหมดโดยส่ง $filters เข้าไปด้วย
+$reports = getAllReports($limit, $offset, $filters);
+$totalReports = getTotalReportsCount($filters);
 $totalPages = ceil($totalReports / $limit);
+
+// ฟังก์ชันช่วยเหลือสำหรับสร้าง URL Pagination ให้จำค่า Filter เดิมไว้
+function buildPageUrl($pageNum)
+{
+    // นำ $_GET ปัจจุบันมาแทนที่ค่า p (page)
+    $params = array_merge($_GET, ['p' => $pageNum]);
+    return '?' . http_build_query($params);
+}
+
+$statusList = getStatuses();
 ?>
 
 <!DOCTYPE html>
@@ -47,25 +66,60 @@ $totalPages = ceil($totalReports / $limit);
             </div>
 
             <div class="bg-white rounded-t-2xl shadow-sm border-b border-gray-100 p-4 sm:p-6">
-                <div class="flex flex-col sm:flex-row gap-4 justify-between">
-                    <div class="relative flex-1 max-w-md">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                <form id="filterForm" action="./" method="GET" class="flex flex-col gap-4">
+                    <input type="hidden" name="page" value="reports">
+
+                    <div class="flex flex-col sm:flex-row gap-4 justify-between">
+                        <div class="relative flex-1 max-w-md">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <input type="text" name="search" value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>" placeholder="ค้นหา รหัส, ชื่อผู้แจ้ง..." class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors duration-200">
                         </div>
-                        <input type="text" placeholder="ค้นหา รหัส, ชื่อผู้แจ้ง..." class="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors duration-200">
+
+                        <div class="flex gap-2">
+                            <select name="status" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-xl bg-gray-50 hover:bg-white transition-colors duration-200">
+                                <option value="">ทุกสถานะ</option>
+                                <?php foreach ($statusList as $st): ?>
+                                    <option value="<?php echo htmlspecialchars($st['code']); ?>" <?php echo ($_GET['status'] ?? '') === $st['code'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($st['name_th']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="flex flex-row gap-1">
+                                <a href="./?page=reports" class="inline-flex items-center cursor-pointer px-4 py-2 bg-gray-800 text-white rounded-xl hover:bg-gray-700 transition-colors duration-200 shadow-sm text-sm whitespace-nowrap">
+                                    เคลียร์
+                                </a>
+                                <button type="submit" class="cursor-pointer px-4 py-2 bg-blue-800 text-white rounded-xl hover:bg-blue-700 transition-colors duration-200 shadow-sm text-sm whitespace-nowrap">
+                                    ค้นหา
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="flex gap-2">
-                        <select class="block w-full pl-3 pr-10 py-2 text-base border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-xl bg-gray-50 hover:bg-white transition-colors duration-200">
-                            <option value="">ทุกสถานะ</option>
-                            <option value="WAITING">รอดำเนินการ</option>
-                            <option value="REPAIRING">กำลังซ่อมแซม</option>
-                            <option value="COMPLETED">เสร็จสิ้น</option>
-                        </select>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-gray-100 pt-4 mt-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">ประเภทงาน (Request Type)</label>
+                            <select id="filter_rt" name="rt" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm rounded-xl bg-gray-50">
+                                <option value="">— ทั้งหมด —</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">หมวดหมู่ (Category)</label>
+                            <select id="filter_cat" name="cat" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm rounded-xl bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                <option value="">— ทั้งหมด —</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">อาการปัญหา (Symptom)</label>
+                            <select id="filter_sym" name="sym" class="block w-full pl-3 pr-10 py-2 text-base border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm rounded-xl bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                <option value="">— ทั้งหมด —</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
+                </form>
             </div>
 
             <div class="bg-white rounded-b-2xl shadow-xl overflow-hidden">
@@ -152,7 +206,7 @@ $totalPages = ceil($totalReports / $limit);
                             </div>
                             <div>
                                 <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                                    <a href="?page=daily-works&p=<?php echo max(1, $page - 1); ?>" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 <?php echo $page <= 1 ? 'pointer-events-none opacity-50' : ''; ?>">
+                                    <a href="<?php echo buildPageUrl(max(1, $page - 1)); ?>" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 <?php echo $page <= 1 ? 'pointer-events-none opacity-50' : ''; ?>">
                                         <span class="sr-only">Previous</span>
                                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -160,12 +214,12 @@ $totalPages = ceil($totalReports / $limit);
                                     </a>
 
                                     <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                                        <a href="?page=daily-works&p=<?php echo $i; ?>" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium <?php echo $i === $page ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' : 'text-gray-700 hover:bg-gray-50'; ?>">
+                                        <a href="<?php echo buildPageUrl($i); ?>" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium <?php echo $i === $page ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' : 'text-gray-700 hover:bg-gray-50'; ?>">
                                             <?php echo $i; ?>
                                         </a>
                                     <?php endfor; ?>
 
-                                    <a href="?page=daily-works&p=<?php echo min($totalPages, $page + 1); ?>" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 <?php echo $page >= $totalPages ? 'pointer-events-none opacity-50' : ''; ?>">
+                                    <a href="<?php echo buildPageUrl(min($totalPages, $page + 1)); ?>" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 <?php echo $page >= $totalPages ? 'pointer-events-none opacity-50' : ''; ?>">
                                         <span class="sr-only">Next</span>
                                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -180,6 +234,118 @@ $totalPages = ceil($totalReports / $limit);
             </div>
         </div>
     </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const filterRt = document.getElementById('filter_rt');
+            const filterCat = document.getElementById('filter_cat');
+            const filterSym = document.getElementById('filter_sym');
+
+            // อ่านค่าที่เลือกไว้จาก URL (เพื่อให้ Dropdown จำค่าหลังกดค้นหา)
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialRt = urlParams.get('rt') || '';
+            const initialCat = urlParams.get('cat') || '';
+            const initialSym = urlParams.get('sym') || '';
+
+            // ฟังก์ชันช่วยเหลือสำหรับหลีกเลี่ยง HTML injection
+            function escapeHtml(str) {
+                return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+
+            // 1. โหลด Request Types ตอนเริ่ม
+            try {
+                const res = await fetch('/api/request_types/get.php', {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                const payload = await res.json();
+                const data = payload?.data ?? payload ?? [];
+
+                let opts = ['<option value="">— ทั้งหมด —</option>'];
+                data.forEach(item => {
+                    const selected = (item.id == initialRt || item.code == initialRt) ? 'selected' : '';
+                    opts.push(`<option value="${escapeHtml(item.id)}" data-code="${escapeHtml(item.code)}" ${selected}>${escapeHtml(item.name_th)}</option>`);
+                });
+                filterRt.innerHTML = opts.join('');
+
+                // ถ้ามีค่าเริ่มต้น ให้โหลด Category ต่อเลย
+                if (initialRt) {
+                    await loadCategories(initialRt, initialCat);
+                }
+            } catch (err) {
+                console.error('Failed to load request types', err);
+            }
+
+            // Event: เมื่อเปลี่ยน Request Type
+            filterRt.addEventListener('change', async function() {
+                filterCat.innerHTML = '<option value="">— ทั้งหมด —</option>';
+                filterCat.disabled = true;
+                filterSym.innerHTML = '<option value="">— ทั้งหมด —</option>';
+                filterSym.disabled = true;
+
+                if (this.value) {
+                    await loadCategories(this.value, '');
+                }
+            });
+
+            // 2. ฟังก์ชันโหลด Categories
+            async function loadCategories(rtId, preselectId) {
+                filterCat.innerHTML = '<option value="">กำลังโหลด...</option>';
+                try {
+                    const res = await fetch(`/api/categories/get_by_request_type.php?request_type_id=${encodeURIComponent(rtId)}`);
+                    const payload = await res.json();
+                    const data = payload?.data ?? [];
+
+                    let opts = ['<option value="">— ทั้งหมด —</option>'];
+                    data.forEach(item => {
+                        const selected = (item.id == preselectId || item.code == preselectId) ? 'selected' : '';
+                        opts.push(`<option value="${escapeHtml(item.id)}" ${selected}>${escapeHtml(item.name_th)}</option>`);
+                    });
+                    filterCat.innerHTML = opts.join('');
+                    filterCat.disabled = false;
+
+                    // ถ้ามีค่าเริ่มต้น ให้โหลด Symptom ต่อเลย
+                    if (preselectId) {
+                        await loadSymptoms(preselectId, initialSym);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    filterCat.innerHTML = '<option value="">— ทั้งหมด —</option>';
+                }
+            }
+
+            // Event: เมื่อเปลี่ยน Category
+            filterCat.addEventListener('change', async function() {
+                filterSym.innerHTML = '<option value="">— ทั้งหมด —</option>';
+                filterSym.disabled = true;
+
+                if (this.value) {
+                    await loadSymptoms(this.value, '');
+                }
+            });
+
+            // 3. ฟังก์ชันโหลด Symptoms
+            async function loadSymptoms(catId, preselectId) {
+                filterSym.innerHTML = '<option value="">กำลังโหลด...</option>';
+                try {
+                    const res = await fetch(`/api/symptoms/get_by_issue_category.php?issue_category_id=${encodeURIComponent(catId)}`);
+                    const payload = await res.json();
+                    const data = payload?.data ?? [];
+
+                    let opts = ['<option value="">— ทั้งหมด —</option>'];
+                    data.forEach(item => {
+                        const selected = (item.id == preselectId || item.code == preselectId) ? 'selected' : '';
+                        opts.push(`<option value="${escapeHtml(item.id)}" ${selected}>${escapeHtml(item.name_th)}</option>`);
+                    });
+                    filterSym.innerHTML = opts.join('');
+                    filterSym.disabled = false;
+                } catch (err) {
+                    console.error(err);
+                    filterSym.innerHTML = '<option value="">— ทั้งหมด —</option>';
+                }
+            }
+        });
+    </script>
 </body>
 
 </html>

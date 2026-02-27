@@ -26,6 +26,9 @@ switch ($page) {
     case 'report':
         load_page('report', ['user' => $user]);
         break;
+    case 'reports':
+        load_page('reports', ['user' => $user]);
+        break;
     case 'work':
         load_page('work', ['user' => $user]);
         break;

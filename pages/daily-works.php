@@ -98,7 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
                     $cat_db = ($category_id !== '' && isset($allowedCatIds[(string)$category_id])) ? (int)$category_id : null;
 
                     // แปลง Key (เช่น '8' หรือ '8_30')
-                    $hour = 0; $min = 0;
+                    $hour = 0;
+                    $min = 0;
                     if (strpos($timeKey, '_30') !== false) {
                         $parts = explode('_', $timeKey);
                         $hour = (int)$parts[0];
@@ -137,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['calendar_action'])) {
 
     $action = $_POST['calendar_action']; // 'edit' หรือ 'delete'
     $log_id = $_POST['log_id'];
-    
+
     try {
         if (isset($pdo)) {
             $pdo->beginTransaction();
@@ -208,8 +209,18 @@ $existing_logs = [];
 $calendar_events = [];
 
 $userPalette = [
-    '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', 
-    '#06b6d4', '#f97316', '#6366f1', '#84cc16', '#d946ef', '#64748b'
+    '#ef4444',
+    '#3b82f6',
+    '#10b981',
+    '#f59e0b',
+    '#8b5cf6',
+    '#ec4899',
+    '#06b6d4',
+    '#f97316',
+    '#6366f1',
+    '#84cc16',
+    '#d946ef',
+    '#64748b'
 ];
 
 if (isset($pdo)) {
@@ -236,8 +247,8 @@ if (isset($pdo)) {
     while ($row = $stmt_log->fetch(PDO::FETCH_ASSOC)) {
         if (!empty($row['start_time'])) {
             [$hh, $mm] = explode(':', $row['start_time']);
-            $hour = (int)$hh;    
-            $minute = (int)$mm; 
+            $hour = (int)$hh;
+            $minute = (int)$mm;
         } else {
             $hour = (int)($row['start_hour'] ?? 0);
             $minute = 0;
@@ -281,17 +292,17 @@ if (isset($pdo)) {
                 'backgroundColor' => $assignedColor,
                 'borderColor' => $assignedColor,
                 'textColor' => '#ffffff',
-                
+
                 // ✅ ส่งข้อมูล User ID และเวลาดิบไปให้ JS ใช้เช็คสิทธิ์
                 'extendedProps' => [
-                    'user_id' => (int)$log['user_id'], 
+                    'user_id' => (int)$log['user_id'],
                     'creator' => $creatorName,
                     'detail' => $log['activity_detail'],
                     'category_id' => $log['category_id'],
                     'category_name' => $log['category_name'] ?? 'ไม่ระบุ',
-                    'date_raw' => $log['work_date'], 
-                    'start_raw' => substr($startT, 0, 5), 
-                    'end_raw' => substr($endT, 0, 5)      
+                    'date_raw' => $log['work_date'],
+                    'start_raw' => substr($startT, 0, 5),
+                    'end_raw' => substr($endT, 0, 5)
                 ]
             ];
         }
@@ -307,21 +318,37 @@ if (isset($_GET['msg'])) {
 
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>บันทึกภาระงานประจำวัน</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <?php include './lib/style.php'; ?>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Prompt', sans-serif; }
-        .fade-enter-active { transition: opacity 0.3s ease-out; }
-        .fc { z-index: 1; }
-        .fc-event { cursor: pointer; }
-        .fc-day-today { background-color: rgba(99, 102, 241, 0.1) !important; }
-        .modal-label { @apply text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1; }
-        .modal-value { @apply text-sm text-slate-800 font-medium; }
+        .fade-enter-active {
+            transition: opacity 0.3s ease-out;
+        }
+
+        .fc {
+            z-index: 1;
+        }
+
+        .fc-event {
+            cursor: pointer;
+        }
+
+        .fc-day-today {
+            background-color: rgba(99, 102, 241, 0.1) !important;
+        }
+
+        .modal-label {
+            @apply text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1;
+        }
+
+        .modal-value {
+            @apply text-sm text-slate-800 font-medium;
+        }
     </style>
 </head>
 
@@ -346,7 +373,7 @@ if (isset($_GET['msg'])) {
 
         <div id="view-table" class="<?= $defaultView === 'table' ? '' : 'hidden' ?> fade-enter-active">
             <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-                
+
                 <div class="px-6 py-5 bg-white border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between sticky top-0 z-10 shadow-sm">
                     <form method="get" class="flex items-center gap-3 flex-wrap">
                         <input type="hidden" name="page" value="daily-works">
@@ -360,9 +387,9 @@ if (isset($_GET['msg'])) {
                             </span>
                             <select name="day" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer font-medium text-slate-700 hover:text-indigo-700"><?php for ($i = 1; $i <= 31; $i++): ?><option value="<?= $i ?>" <?= $i == $d ? 'selected' : '' ?>><?= $i ?></option><?php endfor; ?></select><span class="mx-1 text-slate-400">/</span>
                             <select name="month" onchange="this.form.submit()" class="bg-transparent outline-none cursor-pointer font-medium text-slate-700 hover:text-indigo-700">
-                                <?php 
+                                <?php
                                 $ms = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
-                                foreach ($ms as $i => $n): 
+                                foreach ($ms as $i => $n):
                                     $val = $i + 1; // ✅ บวก 1 เพื่อให้ค่าตรงกับ date('m')
                                 ?>
                                     <option value="<?= $val ?>" <?= ($val == $m) ? 'selected' : '' ?>><?= $n ?></option>
@@ -536,7 +563,9 @@ if (isset($_GET['msg'])) {
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" onclick="closeModal()"></div>
             <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full z-[10000]">
-                <div class="bg-indigo-600 px-4 py-4"><h3 class="text-lg font-bold text-white">📅 เพิ่มกิจกรรมใหม่</h3></div>
+                <div class="bg-indigo-600 px-4 py-4">
+                    <h3 class="text-lg font-bold text-white">📅 เพิ่มกิจกรรมใหม่</h3>
+                </div>
                 <form action="" method="POST" class="p-6">
                     <input type="hidden" name="save_log_calendar" value="1">
                     <input type="hidden" name="work_date" id="m_work_date">
@@ -545,7 +574,9 @@ if (isset($_GET['msg'])) {
                         <div><label class="text-sm font-medium">สิ้นสุด</label><input type="time" name="end_time" id="m_end_time" required class="w-full border p-2 rounded"></div>
                     </div>
                     <div class="mb-4"><label class="text-sm font-medium">รายละเอียด</label><textarea name="activity_detail" rows="3" required class="w-full border p-2 rounded"></textarea></div>
-                    <div class="mb-4"><label class="text-sm font-medium">หมวดหมู่</label><select name="category_id" class="w-full border p-2 rounded"><option value="">-- เลือก --</option><?php foreach ($categories as $cat): ?><option value="<?= $cat['id'] ?>"><?= $cat['name_th'] ?></option><?php endforeach; ?></select></div>
+                    <div class="mb-4"><label class="text-sm font-medium">หมวดหมู่</label><select name="category_id" class="w-full border p-2 rounded">
+                            <option value="">-- เลือก --</option><?php foreach ($categories as $cat): ?><option value="<?= $cat['id'] ?>"><?= $cat['name_th'] ?></option><?php endforeach; ?>
+                        </select></div>
                     <div class="flex justify-end gap-2 border-t pt-4"><button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-100 rounded">ยกเลิก</button><button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded">บันทึก</button></div>
                 </form>
             </div>
@@ -555,7 +586,7 @@ if (isset($_GET['msg'])) {
     <div id="eventDetailModal" class="hidden fixed inset-0 z-[10000] overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" onclick="closeDetailModal()"></div>
-            
+
             <form action="" method="POST" class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md w-full relative">
                 <input type="hidden" name="calendar_action" id="detail_action" value="edit">
                 <input type="hidden" name="log_id" id="detail_id">
@@ -564,7 +595,9 @@ if (isset($_GET['msg'])) {
                 <div class="bg-slate-50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
                     <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">📌 รายละเอียดกิจกรรม</h3>
                     <button type="button" onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
                     </button>
                 </div>
 
@@ -572,16 +605,28 @@ if (isset($_GET['msg'])) {
                     <div>
                         <p class="modal-label">ผู้บันทึกข้อมูล</p>
                         <div class="flex items-center gap-2">
-                            <span class="bg-indigo-100 text-indigo-600 p-1.5 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg></span>
+                            <span class="bg-indigo-100 text-indigo-600 p-1.5 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg></span>
                             <span class="modal-value" id="detail_creator">...</span>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div><p class="modal-label">เวลาเริ่ม</p><input type="time" name="start_time" id="detail_start" class="w-full border-slate-200 rounded-md text-sm text-slate-700 bg-slate-50" disabled></div>
-                        <div><p class="modal-label">เวลาสิ้นสุด</p><input type="time" name="end_time" id="detail_end" class="w-full border-slate-200 rounded-md text-sm text-slate-700 bg-slate-50" disabled></div>
+                        <div>
+                            <p class="modal-label">เวลาเริ่ม</p><input type="time" name="start_time" id="detail_start" class="w-full border-slate-200 rounded-md text-sm text-slate-700 bg-slate-50" disabled>
+                        </div>
+                        <div>
+                            <p class="modal-label">เวลาสิ้นสุด</p><input type="time" name="end_time" id="detail_end" class="w-full border-slate-200 rounded-md text-sm text-slate-700 bg-slate-50" disabled>
+                        </div>
                     </div>
-                    <div><p class="modal-label">หมวดหมู่</p><select name="category_id" id="detail_category" class="w-full border-slate-200 rounded-md text-sm text-slate-700 bg-slate-50 disabled:opacity-75" disabled><option value="">-- ไม่ระบุ --</option><?php foreach ($categories as $cat): ?><option value="<?= $cat['id'] ?>"><?= $cat['name_th'] ?></option><?php endforeach; ?></select></div>
-                    <div><p class="modal-label">รายละเอียดงาน</p><textarea name="activity_detail" id="detail_desc" rows="3" class="w-full border-slate-200 rounded-md text-sm text-slate-700 bg-slate-50 disabled:resize-none" disabled></textarea></div>
+                    <div>
+                        <p class="modal-label">หมวดหมู่</p><select name="category_id" id="detail_category" class="w-full border-slate-200 rounded-md text-sm text-slate-700 bg-slate-50 disabled:opacity-75" disabled>
+                            <option value="">-- ไม่ระบุ --</option><?php foreach ($categories as $cat): ?><option value="<?= $cat['id'] ?>"><?= $cat['name_th'] ?></option><?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <p class="modal-label">รายละเอียดงาน</p><textarea name="activity_detail" id="detail_desc" rows="3" class="w-full border-slate-200 rounded-md text-sm text-slate-700 bg-slate-50 disabled:resize-none" disabled></textarea>
+                    </div>
                 </div>
 
                 <div class="bg-slate-50 px-4 py-3 sm:px-6 flex flex-row-reverse gap-2 border-t border-slate-100">
@@ -625,12 +670,14 @@ if (isset($_GET['msg'])) {
         }
 
         <?php if ($isLoggedIn): ?>
+
             function openModal(dateStr, startTime = '09:00', endTime = '10:00') {
                 document.getElementById('m_work_date').value = dateStr;
                 document.getElementById('m_start_time').value = startTime;
                 document.getElementById('m_end_time').value = endTime;
                 document.getElementById('calendarModal').classList.remove('hidden');
             }
+
             function closeModal() {
                 document.getElementById('calendarModal').classList.add('hidden');
             }
@@ -656,12 +703,22 @@ if (isset($_GET['msg'])) {
                 locale: 'th',
                 initialView: 'dayGridMonth',
                 firstDay: 1,
-                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
-                buttonText: { today: 'วันนี้', month: 'เดือน', week: 'สัปดาห์' },
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek'
+                },
+                buttonText: {
+                    today: 'วันนี้',
+                    month: 'เดือน',
+                    week: 'สัปดาห์'
+                },
                 events: calendarEvents,
                 selectable: isLoggedIn,
                 editable: false,
-                dateClick: function(info) { if (isLoggedIn) openModal(info.dateStr); },
+                dateClick: function(info) {
+                    if (isLoggedIn) openModal(info.dateStr);
+                },
                 select: function(info) {
                     if (isLoggedIn) {
                         const st = info.start.toTimeString().substring(0, 5);
@@ -714,4 +771,5 @@ if (isset($_GET['msg'])) {
         });
     </script>
 </body>
+
 </html>

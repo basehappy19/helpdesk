@@ -3,7 +3,7 @@
 function getUser($userId)
 {
     global $pdo;
-    $sql = "SELECT id, username, display_th FROM users WHERE id = :id LIMIT 1";
+    $sql = "SELECT id, username, display_th, `role` FROM users WHERE id = :id LIMIT 1";
     $stmt = $pdo->prepare($sql);
     $stmt->execute(['id' => (int)$userId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);

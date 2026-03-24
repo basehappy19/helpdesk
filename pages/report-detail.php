@@ -17,6 +17,11 @@ if ($reportDetails === null) {
     exit;
 }
 
+$canEditStatus = false;
+if (isset($user) && in_array($user['role'], ['SYSTEM', 'ADMIN', 'SERVICE'])) {
+    $canEditStatus = true;
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -154,7 +159,7 @@ if ($reportDetails === null) {
                                         </svg>
                                         ประวัติการเปลี่ยนสถานะ
                                     </h2>
-                                    <?php if (isset($user)): ?>
+                                    <?php if ($canEditStatus): ?>
                                         <button onclick="openAddStatusModal()" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-medium rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200">
                                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -182,18 +187,11 @@ if ($reportDetails === null) {
                                                     <!-- Content -->
                                                     <div class="ml-16 flex-grow">
                                                         <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all relative">
-                                                            <?php if (isset($user)): ?>
-                                                                <!-- Action Buttons (Show on Hover) -->
+                                                            <?php if ($canEditStatus): ?>
                                                                 <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
                                                                     <button onclick="openEditStatusModal(<?= htmlspecialchars(json_encode($log)) ?>)" class="p-1.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors" title="แก้ไข">
-                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                                        </svg>
                                                                     </button>
                                                                     <button onclick="confirmDeleteStatus(<?= htmlspecialchars($log['id']) ?>)" class="p-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors" title="ลบ">
-                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                        </svg>
                                                                     </button>
                                                                 </div>
                                                             <?php endif; ?>
@@ -328,7 +326,7 @@ if ($reportDetails === null) {
         </div>
     </div>
 
-    <?php if (isset($user)): ?>
+    <?php if ($canEditStatus): ?>
         <!-- Add Status Modal -->
         <div id="addStatusModal" class="fixed inset-0 backdrop-blur-md bg-white/20 hidden items-center justify-center z-50 p-4">
             <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">

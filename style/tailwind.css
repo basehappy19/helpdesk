@@ -371,6 +371,9 @@
   .z-\[10000\] {
     z-index: 10000;
   }
+  .z-\[10001\] {
+    z-index: 10001;
+  }
   .container {
     width: 100%;
     @media (width >= 40rem) {
@@ -587,6 +590,9 @@
   .h-px {
     height: 1px;
   }
+  .min-h-\[4rem\] {
+    min-height: 4rem;
+  }
   .min-h-screen {
     min-height: 100vh;
   }
@@ -655,6 +661,9 @@
   }
   .max-w-7xl {
     max-width: var(--container-7xl);
+  }
+  .max-w-lg {
+    max-width: var(--container-lg);
   }
   .max-w-md {
     max-width: var(--container-md);
@@ -1165,6 +1174,12 @@
       background-color: color-mix(in oklab, var(--color-slate-900) 40%, transparent);
     }
   }
+  .bg-slate-900\/75 {
+    background-color: color-mix(in srgb, oklch(20.8% 0.042 265.755) 75%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-slate-900) 75%, transparent);
+    }
+  }
   .bg-transparent {
     background-color: transparent;
   }
@@ -1386,6 +1401,9 @@
   .py-5 {
     padding-block: calc(var(--spacing) * 5);
   }
+  .py-6 {
+    padding-block: calc(var(--spacing) * 6);
+  }
   .py-8 {
     padding-block: calc(var(--spacing) * 8);
   }
@@ -1544,6 +1562,9 @@
   }
   .whitespace-nowrap {
     white-space: nowrap;
+  }
+  .whitespace-pre-wrap {
+    white-space: pre-wrap;
   }
   .text-amber-500 {
     color: var(--color-amber-500);

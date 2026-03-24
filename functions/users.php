@@ -12,6 +12,7 @@ function getUser($userId)
             'id'        => (int)$row['id'],
             'username'  => $row['username'],
             'display_th' => $row['display_th'],
+            'role' => $row['role']
         ];
     } else {
         return null;

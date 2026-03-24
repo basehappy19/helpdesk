@@ -2,9 +2,45 @@
 date_default_timezone_set('Asia/Bangkok');
 global $pdo;
 
-/* ==========================================
-   PART 0: SETUP & INIT
-   ========================================== */
+// ==========================================
+// 🚀 AJAX: สำหรับเพิ่มหมวดหมู่ใหม่แบบ Inline
+// ==========================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'add_category') {
+    header('Content-Type: application/json');
+    
+    // เช็คสิทธิ์ก่อนบันทึก (ให้เฉพาะ Admin/System)
+    $userRole = $user['role'] ?? 'MEMBER';
+    if (!in_array($userRole, ['SYSTEM', 'ADMIN'])) {
+        echo json_encode(['status' => 'error', 'message' => 'ไม่มีสิทธิ์เพิ่มหมวดหมู่']);
+        exit;
+    }
+
+    $cat_name = trim($_POST['category_name'] ?? '');
+    if ($cat_name === '') {
+        echo json_encode(['status' => 'error', 'message' => 'ชื่อหมวดหมู่ห้ามว่าง']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO work_log_categories (name_th) VALUES (:name)");
+        $stmt->execute([':name' => $cat_name]);
+        $new_id = $pdo->lastInsertId();
+
+        echo json_encode([
+            'status' => 'success',
+            'id' => $new_id,
+            'name_th' => htmlspecialchars($cat_name)
+        ]);
+        exit;
+    } catch (Exception $e) {
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
+// ==========================================
+// PART 0: SETUP & INIT
+// ==========================================
 $currentY = (int)date('Y');
 $currentM = (int)date('m');
 $currentD = (int)date('d');
@@ -53,9 +89,9 @@ try {
 $allowedCatIds = array_flip(array_map(fn($c) => (string)$c['id'], $categories));
 
 
-/* ==========================================
-   PART 1: HANDLE FORM SUBMISSIONS
-   ========================================== */
+// ==========================================
+// PART 1: HANDLE FORM SUBMISSIONS
+// ==========================================
 
 // 1.1 บันทึกข้อมูลจาก "มุมมองตาราง" (Table)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_table'])) {
@@ -221,9 +257,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_log_calendar']))
     }
 }
 
-/* ==========================================
-   PART 2: DATA FETCHING
-   ========================================== */
+// ==========================================
+// PART 2: DATA FETCHING
+// ==========================================
 $existing_logs = [];
 $calendar_events = [];
 
@@ -321,7 +357,6 @@ if (isset($_GET['msg'])) {
 
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -329,29 +364,12 @@ if (isset($_GET['msg'])) {
     <?php include './lib/style.php'; ?>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     <style>
-        .fade-enter-active {
-            transition: opacity 0.3s ease-out;
-        }
-
-        .fc {
-            z-index: 1;
-        }
-
-        .fc-event {
-            cursor: pointer;
-        }
-
-        .fc-day-today {
-            background-color: rgba(99, 102, 241, 0.1) !important;
-        }
-
-        .modal-label {
-            @apply text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1;
-        }
-
-        .modal-value {
-            @apply text-sm text-slate-800 font-medium;
-        }
+        .fade-enter-active { transition: opacity 0.3s ease-out; }
+        .fc { z-index: 1; }
+        .fc-event { cursor: pointer; }
+        .fc-day-today { background-color: rgba(99, 102, 241, 0.1) !important; }
+        .modal-label { @apply text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1; }
+        .modal-value { @apply text-sm text-slate-800 font-medium; }
     </style>
 </head>
 
@@ -381,7 +399,6 @@ if (isset($_GET['msg'])) {
 
         <div id="view-table" class="<?= $defaultView === 'table' ? '' : 'hidden' ?> fade-enter-active">
             <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
-
                 <div class="px-6 py-5 bg-white border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between sticky top-0 z-10 shadow-sm">
                     <form method="get" class="flex items-center gap-3 flex-wrap">
                         <input type="hidden" name="page" value="daily-works">
@@ -463,8 +480,7 @@ if (isset($_GET['msg'])) {
                                         </td>
 
                                         <td class="px-6 py-4 align-top">
-                                            <?php if ($canEdit): // ⚠️ เปลี่ยนเงื่อนไขให้เฉพาะ Admin ขึ้นไปแก้ได้ 
-                                            ?>
+                                            <?php if ($canEdit): ?>
                                                 <div class="flex flex-col gap-4">
                                                     <?php if (!empty($logsInHour)): ?>
                                                         <?php foreach ($logsInHour as $entry): ?>
@@ -499,8 +515,7 @@ if (isset($_GET['msg'])) {
                                         </td>
 
                                         <td class="px-6 py-4 align-top w-64 min-w-[200px]">
-                                            <?php if ($canEdit): // ⚠️ เปลี่ยนเงื่อนไขให้เฉพาะ Admin ขึ้นไปแก้ได้ 
-                                            ?>
+                                            <?php if ($canEdit): ?>
                                                 <div class="flex flex-col gap-4">
                                                     <?php if (!empty($logsInHour)): ?>
                                                         <?php foreach ($logsInHour as $entry): ?>
@@ -562,13 +577,12 @@ if (isset($_GET['msg'])) {
         </div>
     </div>
 
-    <div id="calendarModal" class="hidden fixed inset-0 z-[10000] overflow-y-auto">
-        <div class="flex items-center justify-center min-h-screen px-4 py-6">
-            <div
-                class="fixed inset-0 bg-slate-900/75"
-                onclick="closeModal()"></div>
 
-            <div class="relative z-[10001] w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+    <div id="calendarModal" class="hidden fixed inset-0 z-[9999] overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0 w-full">
+            <div class="fixed inset-0 bg-slate-900/75 transition-opacity" onclick="closeModal()"></div>
+
+            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 w-full sm:max-w-lg z-10">
                 <div class="bg-indigo-600 px-4 py-4">
                     <h3 class="text-lg font-bold text-white">📅 เพิ่มกิจกรรมใหม่</h3>
                 </div>
@@ -580,66 +594,63 @@ if (isset($_GET['msg'])) {
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="text-sm font-medium">เริ่ม</label>
-                            <input
-                                type="time"
-                                name="start_time"
-                                id="m_start_time"
-                                required
-                                class="w-full border border-slate-300 p-2 rounded-md">
+                            <input type="time" name="start_time" id="m_start_time" required class="w-full border border-slate-300 p-2 rounded-md">
                         </div>
                         <div>
                             <label class="text-sm font-medium">สิ้นสุด</label>
-                            <input
-                                type="time"
-                                name="end_time"
-                                id="m_end_time"
-                                required
-                                class="w-full border border-slate-300 p-2 rounded-md">
+                            <input type="time" name="end_time" id="m_end_time" required class="w-full border border-slate-300 p-2 rounded-md">
                         </div>
                     </div>
 
                     <div class="mb-4">
                         <label class="text-sm font-medium">รายละเอียด</label>
-                        <textarea
-                            name="activity_detail"
-                            rows="3"
-                            required
-                            class="w-full border border-slate-300 p-2 rounded-md"></textarea>
+                        <textarea name="activity_detail" rows="3" required class="w-full border border-slate-300 p-2 rounded-md"></textarea>
                     </div>
 
-                    <div class="mb-4">
-                        <label class="text-sm font-medium">หมวดหมู่</label>
-                        <select name="category_id" class="w-full border border-slate-300 p-2 rounded-md">
-                            <option value="">-- เลือก --</option>
-                            <?php foreach ($categories as $cat): ?>
-                                <option value="<?= $cat['id'] ?>"><?= $cat['name_th'] ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div class="relative mb-4">
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="modal-label mb-0">หมวดหมู่</p>
+                            <button type="button" id="btn_show_add_cat_new" onclick="toggleAddCategoryUINew()" class="inline-flex text-xs text-indigo-600 hover:text-indigo-800 items-center gap-1 font-medium transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                เพิ่มใหม่
+                            </button>
+                        </div>
+
+                        <div id="category_select_wrapper_new">
+                            <select name="category_id" id="detail_category_new" class="w-full border-slate-300 rounded-md text-sm text-slate-700 bg-white shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- ไม่ระบุ --</option>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?= $cat['id'] ?>"><?= $cat['name_th'] ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div id="category_add_wrapper_new" style="display: none;" class="items-center gap-2">
+                            <input type="text" id="new_category_name_new" placeholder="พิมพ์ชื่อหมวดหมู่..." class="w-full border-slate-300 rounded-md text-sm text-slate-700 bg-white shadow-sm focus:ring-indigo-500 focus:border-indigo-500 py-2 px-3">
+                            <button type="button" onclick="saveNewCategory('new')" class="bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 shadow-sm transition-colors" title="บันทึก">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </button>
+                            <button type="button" onclick="toggleAddCategoryUINew()" class="bg-slate-100 text-slate-600 p-2 border border-slate-300 rounded-md hover:bg-slate-200 transition-colors" title="ยกเลิก">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="flex justify-end gap-2 border-t pt-4">
-                        <button
-                            type="button"
-                            onclick="closeModal()"
-                            class="px-4 py-2 bg-slate-100 rounded-lg">
-                            ยกเลิก
-                        </button>
-                        <button
-                            type="submit"
-                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg">
-                            บันทึก
-                        </button>
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">บันทึก</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <div id="eventDetailModal" class="hidden fixed inset-0 z-[10000] overflow-y-auto">
-        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div class="fixed inset-0 bg-slate-900/75 bg-opacity-75 transition-opacity" onclick="closeDetailModal()"></div>
 
-            <form action="" method="POST" class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md w-full relative">
+    <div id="eventDetailModal" class="hidden fixed inset-0 z-[10000] overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0 w-full">
+            <div class="fixed inset-0 bg-slate-900/75 transition-opacity" onclick="closeDetailModal()"></div>
+
+            <form action="" method="POST" class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 w-full sm:max-w-md z-10">
                 <input type="hidden" name="calendar_action" id="detail_action" value="edit">
                 <input type="hidden" name="log_id" id="detail_id">
                 <input type="hidden" name="work_date" id="detail_date_input">
@@ -647,9 +658,7 @@ if (isset($_GET['msg'])) {
                 <div class="bg-slate-50 px-4 py-3 border-b border-slate-100 flex justify-between items-center">
                     <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">📌 รายละเอียดกิจกรรม</h3>
                     <button type="button" onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
 
@@ -657,9 +666,7 @@ if (isset($_GET['msg'])) {
                     <div>
                         <p class="modal-label">ผู้บันทึกข้อมูล</p>
                         <div class="flex items-center gap-2">
-                            <span class="bg-indigo-100 text-indigo-600 p-1.5 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                </svg></span>
+                            <span class="bg-indigo-100 text-indigo-600 p-1.5 rounded-full"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg></span>
                             <span class="modal-value" id="detail_creator">...</span>
                         </div>
                     </div>
@@ -677,14 +684,34 @@ if (isset($_GET['msg'])) {
                         </div>
                     </div>
 
-                    <div>
-                        <p class="modal-label">หมวดหมู่</p>
-                        <select name="category_id" id="detail_category" class="w-full border-slate-300 rounded-md text-sm text-slate-700 bg-white shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">-- ไม่ระบุ --</option>
-                            <?php foreach ($categories as $cat): ?>
-                                <option value="<?= $cat['id'] ?>"><?= $cat['name_th'] ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div class="relative">
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="modal-label mb-0">หมวดหมู่</p>
+                            <button type="button" id="btn_show_add_cat_edit" onclick="toggleAddCategoryUIEdit()" style="display: none;" class="text-xs text-indigo-600 hover:text-indigo-800 items-center gap-1 font-medium transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                เพิ่มใหม่
+                            </button>
+                        </div>
+
+                        <div id="category_select_wrapper_edit">
+                            <select name="category_id" id="detail_category_edit" class="w-full border-slate-300 rounded-md text-sm text-slate-700 bg-white shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">-- ไม่ระบุ --</option>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?= $cat['id'] ?>"><?= $cat['name_th'] ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div id="category_add_wrapper_edit" style="display: none;" class="items-center gap-2">
+                            <input type="text" id="new_category_name_edit" placeholder="พิมพ์ชื่อหมวดหมู่..." class="w-full border-slate-300 rounded-md text-sm text-slate-700 bg-white shadow-sm focus:ring-indigo-500 focus:border-indigo-500 py-2 px-3">
+                            <button type="button" onclick="saveNewCategory('edit')" class="bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 shadow-sm transition-colors" title="บันทึก">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </button>
+                            <button type="button" onclick="toggleAddCategoryUIEdit()" class="bg-slate-100 text-slate-600 p-2 border border-slate-300 rounded-md hover:bg-slate-200 transition-colors" title="ยกเลิก">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+
                         <div id="view_category" class="hidden text-sm text-slate-800 font-medium py-2"></div>
                     </div>
 
@@ -697,20 +724,102 @@ if (isset($_GET['msg'])) {
 
                 <div class="bg-slate-50 px-4 py-3 sm:px-6 flex flex-row-reverse gap-2 border-t border-slate-100">
                     <button type="button" onclick="closeDetailModal()" class="inline-flex justify-center rounded-lg border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 sm:text-sm">ปิด</button>
-                    <button type="submit" id="btn_save_edit" style="display: none;" class="inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 sm:text-sm">บันทึกแก้ไข</button>
-
-                    <button type="button" id="btn_delete_event" style="display: none;" onclick="confirmDelete()" class="inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:text-sm">ลบ</button>
+                    
+                    <button type="submit" id="btn_save_edit" style="display: none;" class="justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 sm:text-sm">บันทึกแก้ไข</button>
+                    <button type="button" id="btn_delete_event" style="display: none;" onclick="confirmDelete()" class="justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:text-sm">ลบ</button>
                 </div>
             </form>
         </div>
     </div>
 
+
     <script>
-        // ✅ รับค่าตัวแปรสิทธิ์จาก PHP มาใช้งานใน JS
+        // -------------------------
+        // 1. AJAX Add Category Logic
+        // -------------------------
+        function toggleAddCategoryUINew() {
+            const selectWrapper = document.getElementById('category_select_wrapper_new');
+            const addWrapper = document.getElementById('category_add_wrapper_new');
+            const input = document.getElementById('new_category_name_new');
+
+            if (addWrapper.style.display === 'none') {
+                addWrapper.style.display = 'flex';
+                selectWrapper.style.display = 'none';
+                input.value = '';
+                input.focus();
+            } else {
+                addWrapper.style.display = 'none';
+                selectWrapper.style.display = 'block';
+            }
+        }
+
+        function toggleAddCategoryUIEdit() {
+            const selectWrapper = document.getElementById('category_select_wrapper_edit');
+            const addWrapper = document.getElementById('category_add_wrapper_edit');
+            const input = document.getElementById('new_category_name_edit');
+
+            if (addWrapper.style.display === 'none') {
+                addWrapper.style.display = 'flex';
+                selectWrapper.style.display = 'none';
+                input.value = '';
+                input.focus();
+            } else {
+                addWrapper.style.display = 'none';
+                selectWrapper.style.display = 'block';
+            }
+        }
+
+        async function saveNewCategory(type) {
+            const input = document.getElementById(`new_category_name_${type}`);
+            const name = input.value.trim();
+
+            if (!name) {
+                alert('กรุณาระบุชื่อหมวดหมู่');
+                input.focus();
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('ajax_action', 'add_category');
+                formData.append('category_name', name);
+
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // อัปเดตตัวเลือกทั้งหมดในหน้า
+                    const categorySelects = document.querySelectorAll('select[name*="category_id"]');
+                    categorySelects.forEach(select => {
+                        const option = new Option(data.name_th, data.id);
+                        select.add(option);
+                    });
+
+                    // เลือกตัวที่พึ่งเพิ่ม
+                    document.getElementById(`detail_category_${type}`).value = data.id;
+
+                    if(type === 'new') toggleAddCategoryUINew();
+                    if(type === 'edit') toggleAddCategoryUIEdit();
+                } else {
+                    alert(data.message || 'เกิดข้อผิดพลาดในการบันทึก');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+            }
+        }
+        
+        // -------------------------
+        // 2. Calendar Logic & Variables
+        // -------------------------
         const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
         const currentUserId = <?= isset($user['id']) ? (int)$user['id'] : 0 ?>;
         const isSystem = <?= $isSystem ? 'true' : 'false' ?>;
-        const canManageOwn = <?= $canManageOwn ? 'true' : 'false' ?>; // ADMIN หรือ SYSTEM
+        const canManageOwn = <?= $canManageOwn ? 'true' : 'false' ?>; 
 
         const calendarEvents = <?= json_encode($calendar_events) ?>;
         let calendar = null;
@@ -740,20 +849,20 @@ if (isset($_GET['msg'])) {
             window.history.pushState({}, '', url);
         }
 
-        <?php if ($canManageOwn): // ⚠️ ให้สิทธิ์เฉพาะคนที่จัดการได้เปิด Modal เพิ่มงาน 
-        ?>
-
+        <?php if ($canManageOwn): ?>
             function openModal(dateStr, startTime = '09:00', endTime = '10:00') {
                 document.getElementById('m_work_date').value = dateStr;
                 document.getElementById('m_start_time').value = startTime;
                 document.getElementById('m_end_time').value = endTime;
+                
+                // ใช้ flex ในระดับ parent แล้ว, ดึง hidden ออกก็โชว์ตรงกลางพอดี
                 document.getElementById('calendarModal').classList.remove('hidden');
             }
-
-            function closeModal() {
-                document.getElementById('calendarModal').classList.add('hidden');
-            }
         <?php endif; ?>
+
+        function closeModal() {
+            document.getElementById('calendarModal').classList.add('hidden');
+        }
 
         function closeDetailModal() {
             document.getElementById('eventDetailModal').classList.add('hidden');
@@ -786,7 +895,7 @@ if (isset($_GET['msg'])) {
                     week: 'สัปดาห์'
                 },
                 events: calendarEvents,
-                selectable: canManageOwn, // ⚠️ ให้เลือกช่องได้เฉพาะผู้มีสิทธิ์
+                selectable: canManageOwn,
                 editable: false,
                 dateClick: function(info) {
                     if (canManageOwn) openModal(info.dateStr);
@@ -803,74 +912,72 @@ if (isset($_GET['msg'])) {
                     const eventId = info.event.id;
                     const isOwner = (parseInt(props.user_id) === currentUserId);
 
-                    // ⚠️ SYSTEM แก้ไขได้หมด | ADMIN แก้ได้เฉพาะของตัวเอง (isOwner)
                     const canEditThisEvent = isSystem || (canManageOwn && isOwner);
 
-                    // ค่าพื้นฐาน (Hidden & Text)
                     document.getElementById('detail_id').value = eventId;
                     document.getElementById('detail_date_input').value = props.date_raw;
                     document.getElementById('detail_creator').textContent = props.creator;
 
-                    // Elements ฝั่ง Input (โหมดแก้ไข)
                     const inputStart = document.getElementById('detail_start');
                     const inputEnd = document.getElementById('detail_end');
-                    const inputCat = document.getElementById('detail_category');
+                    const inputCat = document.getElementById('detail_category_edit');
                     const inputDesc = document.getElementById('detail_desc');
+                    const btnAddCatEdit = document.getElementById('btn_show_add_cat_edit');
+                    const selectCatWrapper = document.getElementById('category_select_wrapper_edit');
 
-                    // Elements ฝั่ง Text (โหมดดูข้อมูล)
                     const viewStart = document.getElementById('view_start');
                     const viewEnd = document.getElementById('view_end');
                     const viewCat = document.getElementById('view_category');
                     const viewDesc = document.getElementById('view_desc');
 
-                    // ปุ่ม Action
                     const saveBtn = document.getElementById('btn_save_edit');
                     const delBtn = document.getElementById('btn_delete_event');
 
-                    // 1. ใส่ค่าให้ Input สำหรับเตรียมแก้ไข
                     inputStart.value = props.start_raw;
                     inputEnd.value = props.end_raw;
                     inputCat.value = props.category_id || "";
                     inputDesc.value = props.detail;
 
-                    // 2. แปลงเวลาและใส่ค่าให้ข้อความ (เพิ่ม น. ตามหลัง)
                     viewStart.textContent = props.start_raw ? (props.start_raw + " น.") : "-";
                     viewEnd.textContent = props.end_raw ? (props.end_raw + " น.") : "-";
                     viewCat.textContent = props.category_name || "-- ไม่ระบุ --";
                     viewDesc.textContent = props.detail;
 
-                    // สลับการแสดงผลตามสิทธิ์
                     if (canEditThisEvent) {
-                        // มีสิทธิ์ -> โชว์ Input, ซ่อนข้อความธรรมดา
+                        // เป็นโหมดแก้ไข 
                         inputStart.classList.remove('hidden');
                         inputEnd.classList.remove('hidden');
-                        inputCat.classList.remove('hidden');
+                        selectCatWrapper.style.display = 'block';
                         inputDesc.classList.remove('hidden');
+                        
+                        btnAddCatEdit.style.display = 'inline-flex'; // โชว์ปุ่มเพิ่มหมวดหมู่
 
                         viewStart.classList.add('hidden');
                         viewEnd.classList.add('hidden');
                         viewCat.classList.add('hidden');
                         viewDesc.classList.add('hidden');
 
-                        saveBtn.classList.remove('hidden');
-                        delBtn.classList.remove('hidden');
+                        saveBtn.style.display = 'inline-flex';
+                        delBtn.style.display = 'inline-flex';
                     } else {
-                        // ไม่มีสิทธิ์ -> ซ่อน Input, โชว์ข้อความธรรมดา
+                        // เป็นโหมดดูข้อมูลอย่างเดียว
                         inputStart.classList.add('hidden');
                         inputEnd.classList.add('hidden');
-                        inputCat.classList.add('hidden');
+                        selectCatWrapper.style.display = 'none';
                         inputDesc.classList.add('hidden');
+                        
+                        btnAddCatEdit.style.display = 'none'; // ซ่อนปุ่มเพิ่มหมวดหมู่
 
                         viewStart.classList.remove('hidden');
                         viewEnd.classList.remove('hidden');
                         viewCat.classList.remove('hidden');
                         viewDesc.classList.remove('hidden');
 
-                        saveBtn.classList.add('hidden');
-                        delBtn.classList.add('hidden');
+                        saveBtn.style.display = 'none';
+                        delBtn.style.display = 'none';
                     }
 
-                    // เปิด Modal
+                    // เปิด Modal รายละเอียด
                     document.getElementById('eventDetailModal').classList.remove('hidden');
                 }
             });
@@ -879,5 +986,4 @@ if (isset($_GET['msg'])) {
         });
     </script>
 </body>
-
 </html>

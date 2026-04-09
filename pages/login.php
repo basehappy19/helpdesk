@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
     <div class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
     <div class="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
 
-    <div class="relative w-full max-w-md p-6">
+    <div class="bg-yellow-400 relative w-full max-w-md p-6">
         <div class="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl overflow-hidden border border-white/20">
             <div class="p-8">
                 <div class="text-center mb-10">

@@ -16,10 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
         header("Location: ./?page=home");
         exit();
     } else {
-        // 2. Login ไม่สำเร็จ: กำหนดข้อความแจ้งเตือน
+        
         $error = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
     }
 }
+
 ?>
 
 <!DOCTYPE html>

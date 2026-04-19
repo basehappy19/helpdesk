@@ -231,9 +231,6 @@ if ($reportDetails === null) {
                                                         <p class="text-xs text-gray-500 mb-2 flex items-center">
                                                             ผู้แก้ไขปัญหา: <?= htmlspecialchars($log['solver_by'] ?? "-") ?>
                                                         </p>
-                                                        <p class="text-xs text-gray-500 mb-2 flex items-center">
-                                                            SLA ข้อใด: <?= htmlspecialchars($log['sla'] ?? "-") ?>
-                                                        </p>
 
                                                         <div class="flex items-center flex-wrap gap-2 mt-3">
                                                             <?php if ($log['from_status_name']): ?>
@@ -349,10 +346,6 @@ if ($reportDetails === null) {
                         <input id="solver_by_input_add" name="solver_by" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" />
                     </div>
                     <div>
-                        <label for="sla_input_add" class="block text-sm font-semibold text-gray-700 mb-1">SLA ข้อใด</label>
-                        <input id="sla_input_add" name="sla" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" />
-                    </div>
-                    <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">วันที่เปลี่ยนสถานะ</label>
                         <input type="datetime-local" name="status_changed_at" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
                     </div>
@@ -395,10 +388,6 @@ if ($reportDetails === null) {
                     <div>
                         <label for="solver_by_input" class="block text-sm font-semibold text-gray-700 mb-1">ผู้แก้ไขปัญหา</label>
                         <input id="solver_by_input" name="solver_by" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
-                    </div>
-                    <div>
-                        <label for="sla_input" class="block text-sm font-semibold text-gray-700 mb-1">SLA ข้อใด</label>
-                        <input id="sla_input" name="sla" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">วันที่เปลี่ยนสถานะ</label>

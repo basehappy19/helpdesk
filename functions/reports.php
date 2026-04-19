@@ -274,7 +274,6 @@ function getReportDetails(int $id): ?array {
             sl.symptom      AS status_symptom,
             sl.cause        AS status_cause,
             sl.solver_by    AS status_solver_by,
-            sl.sla          AS status_sla,
             sl.changed_at   AS status_changed_at,
             s_from.name_th  AS from_status_name,
             s_to.name_th    AS to_status_name,
@@ -327,8 +326,7 @@ function getReportDetails(int $id): ?array {
                 'status_to_style'    => $row['status_to_style'],
                 'symptom'            => $row['status_symptom'],
                 'cause'              => $row['status_cause'],
-                'solver_by'          => $row['status_solver_by'],
-                'sla'                => $row['status_sla'],
+                'solver_by'          => $row['status_solver_by']
             ];
         }
     }

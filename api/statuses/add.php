@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../db/conn.php';
+require_once __DIR__ . '/sync_ticket_time.php'; // 🟢 เรียกใช้ฟังก์ชัน Sync
 
 // ป้องกันการเข้าถึงผิดวิธี
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -45,17 +46,10 @@ if (strlen($changedAt) === 16) {
 }
 
 try {
-    // 🟢 เริ่ม Transaction (รับประกันว่า Log และ Ticket จะถูกอัปเดตพร้อมกัน)
     $pdo->beginTransaction();
 
     // 1. ดึงสถานะก่อนหน้า (from_status)
-    $sqlLast = "
-        SELECT to_status 
-        FROM ticket_status_logs 
-        WHERE ticket_id = :ticket_id
-        ORDER BY changed_at DESC, id DESC
-        LIMIT 1
-    ";
+    $sqlLast = "SELECT to_status FROM ticket_status_logs WHERE ticket_id = :ticket_id ORDER BY changed_at DESC, id DESC LIMIT 1";
     $stmtLast = $pdo->prepare($sqlLast);
     $stmtLast->execute([':ticket_id' => $ticketId]);
     $fromStatus = $stmtLast->fetchColumn();
@@ -76,32 +70,13 @@ try {
         ':symptom'     => $symptom,
         ':cause'       => $cause,
         ':solver_by'   => $solver_by,
-        ':changed_by'  => null, // ดึงจาก session User ID แทนถ้าระบบ Auth รองรับ
+        ':changed_by'  => null, // ถ้าระบบรองรับ Auth ให้ดึง session user_id มาใส่ตรงนี้
         ':changed_at'  => $changedAt,
     ]);
 
-    // 3. 🟢 อัปเดตข้อมูล SLA Timestamp ลงในตาราง tickets 🟢
-    // - ใช้ COALESCE(accepted_at, :time) เพื่อให้เวลา "รับเรื่อง" บันทึกแค่ครั้งแรกครั้งเดียว
-    $sqlUpdateTicket = "UPDATE tickets SET accepted_at = COALESCE(accepted_at, :changed_time)";
-    $updateParams = [
-        ':ticket_id' => $ticketId,
-        ':changed_time' => $changedAt
-    ];
+    // 3. 🟢 เรียกใช้งาน Sync 🟢
+    syncTicketTimestamps($ticketId, $pdo);
 
-    // ถ้าสถานะเปลี่ยนเป็น "เสร็จสิ้น" (ID = 6) ให้ประทับเวลา resolved_at
-    if ($toStatusId === 6) {
-        $sqlUpdateTicket .= ", resolved_at = :resolved_time";
-        $updateParams[':resolved_time'] = $changedAt;
-    } else {
-        // หากถูกแก้สถานะถอยหลัง (เช่น เปลี่ยนจาก 6 กลับไปเป็น 5) ให้เคลียร์ resolved_at ออก
-        $sqlUpdateTicket .= ", resolved_at = NULL";
-    }
-
-    $sqlUpdateTicket .= " WHERE id = :ticket_id";
-    $stmtUpdate = $pdo->prepare($sqlUpdateTicket);
-    $stmtUpdate->execute($updateParams);
-
-    // ยืนยันการทำงาน (Commit)
     $pdo->commit();
 
     http_response_code(201);
@@ -121,3 +96,4 @@ try {
         'error'   => $e->getMessage(),
     ]);
 }
+?>

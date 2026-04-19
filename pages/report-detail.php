@@ -261,22 +261,68 @@ if ($reportDetails === null) {
                 </div>
 
                 <div class="lg:col-span-1 space-y-6">
+                    
                     <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                         <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4">
                             <h3 class="text-white font-semibold flex items-center">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                วันที่สร้าง
+                                เวลาดำเนินการ (Timeline)
                             </h3>
                         </div>
-                        <div class="p-6">
-                            <p class="text-2xl font-bold text-gray-800 mb-1">
-                                <?= formatDateThaiBuddhistWithOutTime($reportDetails['created_at']) ?>
-                            </p>
-                            <p class="text-sm text-gray-500">
-                                เวลา <?= date('H:i', strtotime($reportDetails['created_at'] ?? '')) ?> น.
-                            </p>
+                        <div class="p-6 space-y-5">
+                            
+                            <div class="relative">
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่แจ้งเรื่อง (Created)</p>
+                                <p class="text-sm font-medium text-gray-800">
+                                    <?= formatDateThaiBuddhist($reportDetails['created_at']) ?>
+                                </p>
+                            </div>
+
+                            <div class="relative pt-4 border-t border-gray-100">
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่รับเรื่อง (Accepted)</p>
+                                <?php if (!empty($reportDetails['accepted_at'])): ?>
+                                    <p class="text-sm font-medium text-indigo-700">
+                                        <?= formatDateThaiBuddhist($reportDetails['accepted_at']) ?>
+                                    </p>
+                                <?php else: ?>
+                                    <p class="text-sm font-medium text-yellow-500 flex items-center">
+                                        <svg class="w-4 h-4 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                        กำลังรอรับเรื่อง...
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="relative pt-4 border-t border-gray-100">
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่แก้ไขเสร็จ (Resolved)</p>
+                                <?php if (!empty($reportDetails['resolved_at'])): ?>
+                                    <p class="text-sm font-medium text-emerald-600">
+                                        <?= formatDateThaiBuddhist($reportDetails['resolved_at']) ?>
+                                    </p>
+                                <?php else: ?>
+                                    <p class="text-sm font-medium text-gray-400">
+                                        - ยังไม่เสร็จสิ้น -
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+
+                            <?php if (!empty($reportDetails['accepted_at']) && !empty($reportDetails['resolved_at'])): 
+                                $diffSeconds = strtotime($reportDetails['resolved_at']) - strtotime($reportDetails['accepted_at']);
+                                $mins = floor($diffSeconds / 60);
+                                $hours = floor($mins / 60);
+                                $mins = $mins % 60;
+                                $timeStr = $hours > 0 ? "{$hours} ชั่วโมง {$mins} นาที" : "{$mins} นาที";
+                            ?>
+                            <div class="mt-2 pt-4 border-t-2 border-dashed border-gray-200">
+                                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">ใช้เวลาแก้ไขรวม (SLA Time)</p>
+                                <p class="text-lg font-bold text-emerald-600 flex items-center">
+                                    <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <?= $timeStr ?>
+                                </p>
+                            </div>
+                            <?php endif; ?>
+
                         </div>
                     </div>
 

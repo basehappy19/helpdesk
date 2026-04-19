@@ -268,20 +268,20 @@ if ($reportDetails === null) {
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                เวลาดำเนินการ (Timeline)
+                                เวลาดำเนินการ
                             </h3>
                         </div>
                         <div class="p-6 space-y-5">
                             
                             <div class="relative">
-                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่แจ้งเรื่อง (Created)</p>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่แจ้งเรื่อง</p>
                                 <p class="text-sm font-medium text-gray-800">
                                     <?= formatDateThaiBuddhist($reportDetails['created_at']) ?>
                                 </p>
                             </div>
 
                             <div class="relative pt-4 border-t border-gray-100">
-                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่รับเรื่อง (Accepted)</p>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่รับเรื่อง</p>
                                 <?php if (!empty($reportDetails['accepted_at'])): ?>
                                     <p class="text-sm font-medium text-indigo-700">
                                         <?= formatDateThaiBuddhist($reportDetails['accepted_at']) ?>
@@ -295,7 +295,20 @@ if ($reportDetails === null) {
                             </div>
 
                             <div class="relative pt-4 border-t border-gray-100">
-                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่แก้ไขเสร็จ (Resolved)</p>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">กำหนดเสร็จตาม SLA</p>
+                                <?php if (!empty($reportDetails['sla_due_at'])): ?>
+                                    <p class="text-sm font-medium text-orange-600">
+                                        <?= formatDateThaiBuddhist($reportDetails['sla_due_at']) ?>
+                                    </p>
+                                <?php else: ?>
+                                    <p class="text-sm font-medium text-gray-400">
+                                        - (รอกดรับเรื่องเพื่อคำนวณ) -
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="relative pt-4 border-t border-gray-100">
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่แก้ไขเสร็จ</p>
                                 <?php if (!empty($reportDetails['resolved_at'])): ?>
                                     <p class="text-sm font-medium text-emerald-600">
                                         <?= formatDateThaiBuddhist($reportDetails['resolved_at']) ?>
@@ -313,11 +326,26 @@ if ($reportDetails === null) {
                                 $hours = floor($mins / 60);
                                 $mins = $mins % 60;
                                 $timeStr = $hours > 0 ? "{$hours} ชั่วโมง {$mins} นาที" : "{$mins} นาที";
+
+                                // เช็คว่า ผ่าน หรือ ตก SLA
+                                $isPassSLA = false;
+                                if (!empty($reportDetails['sla_due_at'])) {
+                                    $isPassSLA = strtotime($reportDetails['resolved_at']) <= strtotime($reportDetails['sla_due_at']);
+                                }
                             ?>
                             <div class="mt-2 pt-4 border-t-2 border-dashed border-gray-200">
-                                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">ใช้เวลาแก้ไขรวม (SLA Time)</p>
-                                <p class="text-lg font-bold text-emerald-600 flex items-center">
-                                    <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <div class="flex items-center justify-between mb-1">
+                                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">ใช้เวลาแก้ไขรวม</p>
+                                    <?php if (!empty($reportDetails['sla_due_at'])): ?>
+                                        <?php if ($isPassSLA): ?>
+                                            <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">✅ ผ่าน SLA</span>
+                                        <?php else: ?>
+                                            <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">❌ เกิน SLA</span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
+                                <p class="text-lg font-bold <?= $isPassSLA ? 'text-emerald-600' : 'text-red-600' ?> flex items-center">
+                                    <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                     <?= $timeStr ?>
                                 </p>
                             </div>

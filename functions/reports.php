@@ -265,7 +265,8 @@ function getReportDetails(int $id): ?array {
             r.code,
             r.created_at,
             r.accepted_at,    
-            r.resolved_at,    
+            r.resolved_at,
+            r.sla_due_at,   
             r.department,
             r.reporter_name,
             rt.name_th      AS request_type_name,
@@ -296,20 +297,19 @@ function getReportDetails(int $id): ?array {
     $stmt->execute(['id' => $id]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // ถ้าไม่พบข้อมูล ให้คืนค่า null กลับไป
     if (!$rows) {
         return null;
     }
 
     $first = $rows[0];
 
-    // โครงสร้างข้อมูลหลักของ Ticket
     $work = [
         'id'                 => (int)$first['id'],
         'code'               => $first['code'],
         'created_at'         => $first['created_at'],
         'accepted_at'        => $first['accepted_at'],   
-        'resolved_at'        => $first['resolved_at'],   
+        'resolved_at'        => $first['resolved_at'],
+        'sla_due_at'         => $first['sla_due_at'], 
         'department'         => $first['department'],
         'reporter_name'      => $first['reporter_name'],
         'request_type_name'  => $first['request_type_name'],

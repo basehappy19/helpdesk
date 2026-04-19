@@ -232,7 +232,7 @@ $statistics = getStatusStatistics();
                                                 <h3 class="text-sm font-semibold text-gray-800 truncate"><?php echo $report['symptom_name'] ?></h3>
                                                 <p class="text-xs text-gray-500 mt-1 truncate"><?php echo $report['reporter_name'] ?> • <?php echo diffLargestThai($report['created_at']) ?></p>
                                             </div>
-                                            <a href="./?page=work&id=<?php echo $report['id'] ?>" class="text-gray-300 hover:text-indigo-600 transition-colors p-2">
+                                            <a target="_blank" href="./?page=report-detail&id=<?php echo $report['id'] ?>" class="text-gray-300 hover:text-indigo-600 transition-colors p-2">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                                 </svg>

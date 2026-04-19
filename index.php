@@ -53,6 +53,9 @@ switch ($page) {
     case 'add-user':
         load_page('add-user', ['user' => $user]);
         break;
+    case 'statistics':
+        load_page('statistics', ['user' => $user]);
+        break;
     case 'logout':
         $_SESSION = [];
 

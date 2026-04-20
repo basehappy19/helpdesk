@@ -68,10 +68,10 @@ $all_users = $manageController->getAllUsers();
                     <table class="w-full text-left text-sm whitespace-nowrap">
                         <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                             <tr>
-                                <th class="px-6 py-4">ผู้ใช้งาน (Username)</th>
+                                <th class="px-6 py-4">ชื่อผู้ใช้</th>
                                 <th class="px-6 py-4">ชื่อ-นามสกุล</th>
                                 <th class="px-6 py-4">เบอร์ภายใน</th>
-                                <th class="px-6 py-4">สิทธิ์ (Role)</th>
+                                <th class="px-6 py-4">สิทธิ์</th>
                                 <th class="px-6 py-4">วันที่สร้าง</th>
                                 <th class="px-6 py-4 text-right">จัดการ</th>
                             </tr>
@@ -160,21 +160,21 @@ $all_users = $manageController->getAllUsers();
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อ-นามสกุล (ภาษาไทย) <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อ-นามสกุล <span class="text-red-500">*</span></label>
                         <input type="text" name="display_th" id="display_th" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-colors">
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">เบอร์ภายใน (Ext.)</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">เบอร์ภายใน</label>
                             <input type="text" name="phone_ext" id="phone_ext" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-colors">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">สิทธิ์ (Role) <span class="text-red-500">*</span></label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">สิทธิ์<span class="text-red-500">*</span></label>
                             <select name="role" id="role" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
                                 <option value="MEMBER">MEMBER (ทั่วไป)</option>
                                 <option value="SERVICE">SERVICE (จนท.ไอที)</option>
-                                <option value="ADMIN">ADMIN (หัวหน้า)</option>
+                                <option value="ADMIN">ADMIN (แอดมิน)</option>
                                 <option value="SYSTEM">SYSTEM (ผู้ดูแลระบบสูงสุด)</option>
                             </select>
                         </div>

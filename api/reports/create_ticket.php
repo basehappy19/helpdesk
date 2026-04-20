@@ -42,7 +42,6 @@ if ($symptom_code === '')      $errors[] = 'issue_symptom code is required';
 if ($department === '')        $errors[] = 'department is required';
 if ($building === '')          $errors[] = 'building is required';
 if ($floor === '')             $errors[] = 'floor is required';
-if ($phone === '')             $errors[] = 'phone is required';
 if ($reporter === '')          $errors[] = 'reporter is required';
 
 if ($category_code === '__other__' && $category_other_text === '') {

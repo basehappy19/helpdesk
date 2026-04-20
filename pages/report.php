@@ -561,7 +561,6 @@
                 const bldg = (form.querySelector("[name='building']")?.value || '').trim();
                 const flr = (form.querySelector("[name='floor']")?.value || '').trim();
                 const serv = (form.querySelector("[name='service_point']")?.value || '').trim();
-                const phone = (form.querySelector("[name='phone']")?.value || '').trim();
                 const rep = (form.querySelector("[name='reporter']")?.value || '').trim();
 
                 if (!rt) return showError("กรุณาเลือกปัญหาการใช้งาน", requestTypeSelect);

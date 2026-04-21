@@ -1,6 +1,0 @@
-[21-Apr-2026 21:45:43 UTC] PHP Fatal error:  Uncaught Dotenv\Exception\InvalidPathException: Unable to read any of the environment file(s) at [/var/www/html/api/reports/../.env]. in /var/www/html/vendor/vlucas/phpdotenv/src/Store/FileStore.php:68
-Stack trace:
-#0 /var/www/html/vendor/vlucas/phpdotenv/src/Dotenv.php(222): Dotenv\Store\FileStore->read()
-#1 /var/www/html/api/reports/create_ticket.php(11): Dotenv\Dotenv->load()
-#2 {main}
-  thrown in /var/www/html/vendor/vlucas/phpdotenv/src/Store/FileStore.php on line 68

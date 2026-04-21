@@ -161,9 +161,17 @@ $statusList = getStatuses();
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
-                                            <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($report['category_name']); ?></div>
-                                            <div class="text-sm text-gray-500 mt-0.5 line-clamp-1"><?php echo htmlspecialchars($report['symptom_name']); ?></div>
-                                            <div class="text-xs text-indigo-500 mt-1 bg-indigo-50 inline-block px-2 py-0.5 rounded"><?php echo htmlspecialchars($report['request_type_name']); ?></div>
+                                            <div class="text-sm font-medium text-gray-900">
+                                                <?php echo htmlspecialchars($report['category_name'] ?? ''); ?>
+                                            </div>
+
+                                            <div class="text-sm text-gray-500 mt-0.5 line-clamp-1">
+                                                <?php echo htmlspecialchars($report['symptom_name'] ?? ''); ?>
+                                            </div>
+
+                                            <div class="text-xs text-indigo-500 mt-1 bg-indigo-50 inline-block px-2 py-0.5 rounded">
+                                                <?php echo htmlspecialchars($report['request_type_name'] ?? ''); ?>
+                                            </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm text-gray-900 flex items-center">
@@ -180,7 +188,7 @@ $statusList = getStatuses();
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <a target="_blank" href="./?page=report-detail&id=<?php echo $report['id']; ?>" class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm group-hover:shadow">
+                                            <a target="_blank" href="./?page=report-detail&code=<?php echo $report['code']; ?>" class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm group-hover:shadow">
                                                 ดูรายละเอียด
                                                 <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>

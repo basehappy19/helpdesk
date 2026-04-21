@@ -5,13 +5,13 @@ global $pdo;
 require_once __DIR__ . '/../controllers/ReportDetailController.php';
 require_once __DIR__ . '/../functions/status.php';
 
-$ticketId = isset($_GET['id']) ? $_GET['id'] : 0;
+$ticketCode = isset($_GET['code']) ? $_GET['code'] : 0;
 
 // เริ่มต้นการทำงานของ Controller
-$controller = new ReportDetailController($pdo, $user ?? null, $ticketId);
+$controller = new ReportDetailController($pdo, $user ?? null, $ticketCode);
 
-// เช็ค Error ถ้า ID ไม่ถูกต้องให้เด้งกลับ
-if ($controller->error === "INVALID_ID") {
+// เช็ค Error ถ้า Code ไม่ถูกต้องให้เด้งกลับ
+if ($controller->error === "INVALID_CODE") {
     header('Location: ./?page=reports');
     exit;
 }

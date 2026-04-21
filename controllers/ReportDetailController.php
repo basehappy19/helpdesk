@@ -5,7 +5,7 @@ require_once __DIR__ . "/../functions/reports.php";
 class ReportDetailController {
     private $pdo;
     private $user;
-    private $ticketId;
+    private $ticketCode;
 
     // ตัวแปรสำหรับส่งไปให้ View ใช้งาน
     public $reportDetails = null;
@@ -13,10 +13,10 @@ class ReportDetailController {
     public $canEditStatus = false;
     public $error = null;
 
-    public function __construct($pdo, $user, $ticketId) {
+    public function __construct($pdo, $user, $ticketCode) {
         $this->pdo = $pdo;
         $this->user = $user;
-        $this->ticketId = (int)$ticketId;
+        $this->ticketCode = (string)$ticketCode;
         
         $this->loadData();
         $this->checkPermissions();
@@ -24,13 +24,13 @@ class ReportDetailController {
 
     // 1. โหลดข้อมูลรายละเอียดปัญหาและสถานะ
     private function loadData() {
-        if ($this->ticketId <= 0) {
-            $this->error = "INVALID_ID";
+        if ($this->ticketCode === '') {
+            $this->error = "INVALID_CODE";
             return;
         }
 
         // ดึงข้อมูลรายละเอียดปัญหา (จาก functions/reports.php)
-        $this->reportDetails = getReportDetails($this->ticketId);
+        $this->reportDetails = getReportDetails($this->ticketCode);
 
         // ถ้ามีข้อมูลปัญหา ให้ดึงรายการสถานะทั้งหมดมาเตรียมไว้สำหรับ Dropdown
         if ($this->reportDetails) {

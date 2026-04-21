@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
-
+require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../../db/conn.php';
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->load();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -12,21 +15,49 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// ---------- รับค่าจากฟอร์ม (เป็น code) ----------
+// ---------- ฟังก์ชันส่ง Telegram (ดึงค่าจาก ENV) ----------
+function sendTelegramAlert(string $message): void
+{
+    $botToken = getenv('TELEGRAM_BOT_TOKEN') ?: ($_ENV['TELEGRAM_BOT_TOKEN'] ?? '');
+    $chatId   = getenv('TELEGRAM_CHAT_ID') ?: ($_ENV['TELEGRAM_CHAT_ID'] ?? '');
+
+    if (!$botToken || !$chatId) {
+        return;
+    }
+
+    $url = "https://api.telegram.org/bot{$botToken}/sendMessage";
+    $data = [
+        'chat_id' => $chatId,
+        'text' => $message,
+        'parse_mode' => 'HTML',
+        'disable_web_page_preview' => false
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_exec($ch);
+    curl_close($ch);
+}
+
+// ---------- รับค่าจากฟอร์ม ----------
 $request_type_code   = trim((string)($_POST['request_type'] ?? ''));
 $category_code       = trim((string)($_POST['issue_category'] ?? ''));
 $category_other_text = trim((string)($_POST['issue_category_other'] ?? ''));
 $symptom_code        = trim((string)($_POST['issue_symptom'] ?? ''));
 $symptom_other_text  = trim((string)($_POST['issue_symptom_other'] ?? ''));
 
-$department   = trim((string)($_POST['department'] ?? ''));
-$building     = trim((string)($_POST['building'] ?? ''));
-$floor        = trim((string)($_POST['floor'] ?? ''));
+$department    = trim((string)($_POST['department'] ?? ''));
+$building      = trim((string)($_POST['building'] ?? ''));
+$floor         = trim((string)($_POST['floor'] ?? ''));
 $service_point = trim((string)($_POST['service_point'] ?? ''));
-$phone        = trim((string)($_POST['phone'] ?? ''));
-$reporter     = trim((string)($_POST['reporter'] ?? ''));
+$phone         = trim((string)($_POST['phone'] ?? ''));
+$reporter      = trim((string)($_POST['reporter'] ?? ''));
 
-// ---- normalize: ถ้า code ว่างแต่มี _other ให้ตีความเป็น 'other' ----
+// ---- normalize ----
 if ($category_code === '' && $category_other_text !== '') {
     $category_code = '__other__';
 }
@@ -34,7 +65,7 @@ if ($symptom_code === '' && $symptom_other_text !== '') {
     $symptom_code = '__other__';
 }
 
-// ---------- Validate ขั้นต้น ----------
+// ---------- Validate ----------
 $errors = [];
 if ($request_type_code === '') $errors[] = 'request_type code is required';
 if ($category_code === '')     $errors[] = 'issue_category code is required';
@@ -60,28 +91,28 @@ if ($errors) {
 $pdo->beginTransaction();
 try {
     $requestTypeId = getRequestTypeIdByCode($pdo, $request_type_code);
-    if (!$requestTypeId) {
-        throw new RuntimeException('Invalid request_type code');
-    }
+    if (!$requestTypeId) throw new RuntimeException('Invalid request_type code');
 
+    // จัดการ Category
     if ($category_code === '__other__') {
         $cat = createCategoryWithCode($pdo, $requestTypeId, $category_other_text);
-        $categoryId   = $cat['id'];
-        $categoryCode = $cat['code'];
+        $categoryId = $cat['id'];
+        $categoryDisplayName = $category_other_text;
     } else {
         $categoryId = getCategoryIdByCode($pdo, $category_code);
         if (!$categoryId) throw new RuntimeException('Invalid issue_category code');
-        $categoryCode = $category_code;
+        $categoryDisplayName = $category_code;
     }
 
+    // จัดการ Symptom
     if ($symptom_code === '__other__') {
         $sym = createSymptomWithCode($pdo, $categoryId, $symptom_other_text);
-        $symptomId   = $sym['id'];
-        $symptomCode = $sym['code'];
+        $symptomId = $sym['id'];
+        $symptomDisplayName = $symptom_other_text;
     } else {
         $symptomId = getSymptomIdByCode($pdo, $symptom_code);
         if (!$symptomId) throw new RuntimeException('Invalid issue_symptom code');
-        $symptomCode = $symptom_code;
+        $symptomDisplayName = $symptom_code;
     }
 
     $chk = $pdo->prepare("SELECT category_id FROM issue_symptoms WHERE id = ?");
@@ -104,9 +135,8 @@ try {
     ];
 
     $result = insert_ticket_with_code($pdo, $data, 5);
-    if (!$result['ok']) {
-        throw new RuntimeException($result['error']);
-    }
+    if (!$result['ok']) throw new RuntimeException($result['error']);
+
     $logStmt = $pdo->prepare("
         INSERT INTO ticket_status_logs (ticket_id, from_status, to_status, changed_by)
         VALUES (:ticket_id, NULL, :to_status, :changed_by)
@@ -118,26 +148,43 @@ try {
     ]);
 
     $pdo->commit();
+    $baseUrl = getenv('APP_URL') ?: 'http://127.0.0.1:8080';
+
+    // ---------- สร้างข้อความแจ้งเตือน Telegram ----------
+    $ticketCode = $result['code'];
+    $msg = "<b>🛠 มีรายการแจ้งซ่อมใหม่!</b>\n";
+    $msg .= "----------------------------------\n";
+    $msg .= "<b>Ticket ID:</b> <code>{$ticketCode}</code>\n";
+    $msg .= "<b>ผู้แจ้ง:</b> {$reporter} (โทร: {$phone})\n";
+    $msg .= "<b>หน่วยงาน:</b> {$department}\n";
+    $msg .= "<b>สถานที่:</b> ตึก {$building} ชั้น {$floor} (" . ($service_point ?: '-') . ")\n";
+    $msg .= "----------------------------------\n";
+    $msg .= "<b>ปัญหาการใช้งาน:</b> {$request_type_code}\n";
+    $msg .= "<b>รายละเอียด:</b> {$categoryDisplayName} / {$symptomDisplayName}\n";
+    $msg .= "----------------------------------\n";
+    $msg .= "🔗 <a href='{$baseUrl}/?page=report-detail&code={$ticketCode}'>จัดการรายการนี้</a>";
+
+    sendTelegramAlert($msg);
 
     http_response_code(201);
     echo json_encode([
         'ok' => true,
         'message' => 'Ticket created',
-        'ticket_code' => $result['code'],
+        'ticket_code' => $ticketCode,
     ]);
 } catch (Throwable $e) {
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     http_response_code(500);
-    echo json_encode(['ok' => false, 'message' => 'DB error', 'error' => $e->getMessage()]);
+    echo json_encode(['ok' => false, 'message' => 'Internal Error', 'error' => $e->getMessage()]);
 }
+
+// ---------- Helper Functions ----------
+
 function insert_ticket_with_code(PDO $pdo, array $payload, int $maxRetry = 5): array
 {
-    $sql = "
-        INSERT INTO tickets
-        (code, request_type_id, category_id, symptom_id, department, building, floor, service_point, phone_ext, reporter_name)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ";
-
+    $sql = "INSERT INTO tickets (code, request_type_id, category_id, symptom_id, department, building, floor, service_point, phone_ext, reporter_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     for ($i = 0; $i < $maxRetry; $i++) {
         $code = new_ticket_code();
         try {
@@ -152,31 +199,15 @@ function insert_ticket_with_code(PDO $pdo, array $payload, int $maxRetry = 5): a
                 $payload['floor'],
                 $payload['service_point'] ?? null,
                 $payload['phone'],
-                $payload['reporter'],
+                $payload['reporter']
             ]);
             return ['ok' => true, 'code' => $code, 'id' => (int)$pdo->lastInsertId()];
         } catch (PDOException $e) {
-            if ((int)($e->errorInfo[1] ?? 0) === 1062) {
-                continue;
-            }
+            if ((int)($e->errorInfo[1] ?? 0) === 1062) continue;
             throw $e;
         }
     }
     return ['ok' => false, 'error' => 'Could not generate unique ticket code'];
-}
-
-function ensure_unique_code(PDO $pdo, string $table, string $codeBase): string
-{
-    $code = $codeBase;
-    $i = 1;
-    $sql = "SELECT 1 FROM {$table} WHERE code = ? LIMIT 1";
-    $stmt = $pdo->prepare($sql);
-    while (true) {
-        $stmt->execute([$code]);
-        if (!$stmt->fetch()) return $code;
-        $code = $codeBase . '-' . $i;
-        $i++;
-    }
 }
 
 function getRequestTypeIdByCode(PDO $pdo, string $code): ?int
@@ -203,45 +234,42 @@ function getSymptomIdByCode(PDO $pdo, string $code): ?int
     return $row ? (int)$row['id'] : null;
 }
 
+function new_ticket_code(): string
+{
+    $time = base_convert((string)time(), 10, 36);
+    $rand = base_convert((string)random_int(100, 1295), 10, 36);
+    return strtoupper("H{$time}-{$rand}");
+}
+
 function gen_auto_code(string $prefix): string
 {
-    $date = date('Ymd');
-    $rand = strtoupper(bin2hex(random_bytes(3))); // 6 ตัว
-    return sprintf('%s-%s-%s', $prefix, $date, $rand);
+    return sprintf('%s-%s-%s', $prefix, date('Ymd'), strtoupper(bin2hex(random_bytes(3))));
+}
+
+function ensure_unique_code(PDO $pdo, string $table, string $codeBase): string
+{
+    $code = $codeBase;
+    $i = 1;
+    $stmt = $pdo->prepare("SELECT 1 FROM {$table} WHERE code = ? LIMIT 1");
+    while (true) {
+        $stmt->execute([$code]);
+        if (!$stmt->fetch()) return $code;
+        $code = $codeBase . '-' . $i++;
+    }
 }
 
 function createCategoryWithCode(PDO $pdo, int $requestTypeId, string $nameTh): array
 {
-    $base = gen_auto_code('CAT');
-
-    $code = ensure_unique_code($pdo, 'issue_categories', $base);
-
-    $stmt = $pdo->prepare("
-        INSERT INTO issue_categories (request_type_id, code, name_th)
-        VALUES (?, ?, ?)
-    ");
+    $code = ensure_unique_code($pdo, 'issue_categories', gen_auto_code('CAT'));
+    $stmt = $pdo->prepare("INSERT INTO issue_categories (request_type_id, code, name_th) VALUES (?, ?, ?)");
     $stmt->execute([$requestTypeId, $code, $nameTh]);
-
     return ['id' => (int)$pdo->lastInsertId(), 'code' => $code];
 }
 
 function createSymptomWithCode(PDO $pdo, int $categoryId, string $nameTh): array
 {
-    $base = gen_auto_code('SYM');
-    $code = ensure_unique_code($pdo, 'issue_symptoms', $base);
-
-    $stmt = $pdo->prepare("
-        INSERT INTO issue_symptoms (category_id, code, name_th)
-        VALUES (?, ?, ?)
-    ");
+    $code = ensure_unique_code($pdo, 'issue_symptoms', gen_auto_code('SYM'));
+    $stmt = $pdo->prepare("INSERT INTO issue_symptoms (category_id, code, name_th) VALUES (?, ?, ?)");
     $stmt->execute([$categoryId, $code, $nameTh]);
-
     return ['id' => (int)$pdo->lastInsertId(), 'code' => $code];
-}
-
-function new_ticket_code(): string
-{
-    $date = date('Ymd');
-    $rand = strtoupper(bin2hex(random_bytes(3))); // 6 hex chars
-    return "T{$date}-{$rand}";
 }

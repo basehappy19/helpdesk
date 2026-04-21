@@ -256,7 +256,7 @@ function getTotalReportsCount(array $filters = []): int {
     return (int)$stmt->fetchColumn();
 }
 
-function getReportDetails(int $id): ?array {
+function getReportDetails(string $code): ?array {
     global $pdo;
 
     $sql = "
@@ -289,12 +289,12 @@ function getReportDetails(int $id): ?array {
             LEFT JOIN ticket_status_logs AS sl     ON sl.ticket_id      = r.id
             LEFT JOIN ticket_statuses    AS s_from ON s_from.id         = sl.from_status
             LEFT JOIN ticket_statuses    AS s_to   ON s_to.id           = sl.to_status
-        WHERE r.id = :id
+        WHERE r.code = :code
         ORDER BY sl.changed_at DESC, sl.id DESC
     ";
 
     $stmt = $pdo->prepare($sql);
-    $stmt->execute(['id' => $id]);
+    $stmt->execute(['code' => $code]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (!$rows) {

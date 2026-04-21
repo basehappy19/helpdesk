@@ -432,7 +432,7 @@ if ($reportDetails === null) {
         </div>
 
         <div id="editStatusModal" class="fixed inset-0 backdrop-blur-sm bg-slate-900/60 hidden items-center justify-center z-[10000] p-4">
-            <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all relative w-full">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-md transform transition-all relative w-full">
                 <div class="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4 rounded-t-2xl flex justify-between items-center">
                     <h3 class="text-lg font-bold text-white flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -476,7 +476,7 @@ if ($reportDetails === null) {
         </div>
 
         <div id="deleteStatusModal" class="fixed inset-0 backdrop-blur-sm bg-slate-900/60 hidden items-center justify-center z-[10000] p-4">
-            <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full transform transition-all text-center p-6 relative w-full">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-sm transform transition-all text-center p-6 relative w-full">
                 <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />

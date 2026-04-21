@@ -22,7 +22,7 @@
                     ย้อนกลับ
                 </a>
             </div>
-            
+
             <!-- Header Card -->
             <div class="bg-white md:rounded-2xl shadow-sm border border-gray-100 p-8 mb-6 card-hover">
                 <div class="flex items-center gap-4">
@@ -634,7 +634,7 @@
                             requestTypeSelect.value = '';
                         } else {
                             const msg = data?.message || data?.error || `เกิดข้อผิดพลาด (HTTP ${res.status})`;
-                            toast.error(msg);
+                            toast.error("ไม่สามารถส่งข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
                         }
                     } catch (err) {
                         console.error(err);

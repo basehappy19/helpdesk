@@ -11,4 +11,4 @@
 <link rel="manifest" href="/style/favicon/site.webmanifest">
 
 <meta name="msapplication-config" content="/style/favicon/browserconfig.xml">
-<meta name="msapplication-TileColor" content="#2d89ef"> <meta name="theme-color" content="#ffffff"> ```
+<meta name="msapplication-TileColor" content="#2d89ef"> <meta name="theme-color" content="#ffffff">

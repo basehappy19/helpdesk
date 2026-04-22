@@ -22,7 +22,52 @@ $statuses      = $controller->statuses;
 $canEditStatus = $controller->canEditStatus;
 
 if ($reportDetails === null) {
-    echo "<div class='min-h-screen flex items-center justify-center bg-gray-50'><h1 class='text-2xl text-gray-500'>ไม่พบข้อมูลรายการแจ้งปัญหานี้</h1></div>";
+?>
+    <!DOCTYPE html>
+    <html lang="th">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ไม่พบข้อมูล | HelpDesk</title>
+        <?php include './lib/style.php'; ?>
+    </head>
+
+    <body class="flex flex-col min-h-screen">
+        <?php include './components/navbar.php'; ?>
+
+        <div class="flex-grow bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center py-12 px-4">
+            <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 text-center border border-white/60 transform hover:-translate-y-1 transition-all duration-300">
+
+                <div class="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner relative">
+                    <svg class="w-12 h-12 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div class="absolute -top-1 -right-1 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm">
+                        <span class="text-xl">🔍</span>
+                    </div>
+                </div>
+
+                <h1 class="text-2xl font-bold text-gray-800 mb-3">ไม่พบรายการแจ้งปัญหานี้</h1>
+                <p class="text-gray-500 mb-8 text-sm leading-relaxed">
+                    รหัสปัญหา <b class="text-indigo-600 font-semibold">#<?= htmlspecialchars($ticketCode) ?></b> ที่คุณพยายามเข้าถึงอาจไม่ถูกต้อง หรือรายการนี้อาจถูกลบออกจากระบบไปแล้ว
+                </p>
+
+                <div class="space-y-3">
+                    <a href="./?page=reports" class="inline-flex items-center justify-center w-full px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-indigo-200 hover:scale-[1.02] transition-all duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        กลับสู่หน้ารายการแจ้งปัญหา
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </body>
+
+    </html>
+<?php
     exit;
 }
 ?>

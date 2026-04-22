@@ -2,3 +2,4 @@
 /vendor
 /lib/generated/prisma
 /.env
+/debug.log

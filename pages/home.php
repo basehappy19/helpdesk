@@ -229,8 +229,8 @@ $statistics = getStatusStatistics();
                                                     ?>
                                                     <span class="px-2 py-0.5 <?php echo $colorClass ?> rounded text-[10px] font-medium whitespace-nowrap"><?php echo $statusName ?></span>
                                                 </div>
-                                                <h3 class="text-sm font-semibold text-gray-800 truncate"><?php echo $report['symptom_name'] ?></h3>
-                                                <p class="text-xs text-gray-500 mt-1 truncate"><?php echo $report['reporter_name'] ?> • <?php echo diffLargestThai($report['created_at']) ?></p>
+                                                <h3 class="text-sm font-semibold text-gray-800 truncate"><?php echo htmlspecialchars($report['display_symptom'] ?? '-') ?></h3>
+                                                <p class="text-xs text-gray-500 mt-1 truncate"><?php echo htmlspecialchars($report['reporter_name']) ?> • <?php echo diffLargestThai($report['created_at']) ?></p>
                                             </div>
                                             <a target="_blank" href="./?page=report-detail&id=<?php echo $report['id'] ?>" class="text-gray-300 hover:text-indigo-600 transition-colors p-2">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

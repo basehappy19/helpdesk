@@ -11,6 +11,8 @@ function getRecentReports(int $limit = 3): array {
             r.created_at,
             r.department,
             r.reporter_name,
+            r.category_other_remark, 
+            r.symptom_other_remark,
             rt.name_th      AS request_type_name,
             ct.name_th      AS category_name,
             st.name_th      AS symptom_name,
@@ -41,6 +43,19 @@ function getRecentReports(int $limit = 3): array {
 
         // สร้างโครงสร้าง Ticket หากยังไม่มีใน Array
         if (!isset($byId[$id])) {
+            
+            // จัดการ Format การแสดงผลหมวดหมู่
+            $catName = $row['category_name'] ?? '';
+            if (!empty($row['category_other_remark'])) {
+                $catName = $catName ? $catName . ' (' . $row['category_other_remark'] . ')' : $row['category_other_remark'];
+            }
+
+            // จัดการ Format การแสดงผลอาการ
+            $symName = $row['symptom_name'] ?? '';
+            if (!empty($row['symptom_other_remark'])) {
+                $symName = $symName ? $symName . ' (' . $row['symptom_other_remark'] . ')' : $row['symptom_other_remark'];
+            }
+
             $byId[$id] = [
                 'id'                 => $id,
                 'code'               => $row['code'],
@@ -48,8 +63,8 @@ function getRecentReports(int $limit = 3): array {
                 'department'         => $row['department'],
                 'reporter_name'      => $row['reporter_name'],
                 'request_type_name'  => $row['request_type_name'],
-                'category_name'      => $row['category_name'],
-                'symptom_name'       => $row['symptom_name'],
+                'display_category'   => $catName ?: '-', // ฟิลด์ที่จัด Format แล้ว
+                'display_symptom'    => $symName ?: '-', // ฟิลด์ที่จัด Format แล้ว
                 'ticket_status_logs' => [],
             ];
         }
@@ -80,32 +95,26 @@ function getAllReports(int $limit = 50, int $offset = 0, array $filters = []): a
     global $pdo;
     
     // 1. สร้างเงื่อนไข WHERE แบบไดนามิก
-    $whereConditions = ["1=1"]; // ค่าเริ่มต้น (เผื่อไม่มี filter)
+    $whereConditions = ["1=1"];
     $params = [];
 
-    // ค้นหาข้อความ (ค้นจากรหัสตั๋ว หรือ ชื่อผู้แจ้ง)
     if (!empty($filters['search'])) {
-        // เปลี่ยนชื่อ parameter ให้ไม่ซ้ำกัน
         $whereConditions[] = "(r.code LIKE :search_code OR r.reporter_name LIKE :search_name)";
         $params[':search_code'] = '%' . $filters['search'] . '%';
         $params[':search_name'] = '%' . $filters['search'] . '%';
     }
-    // กรองประเภทงาน
     if (!empty($filters['rt'])) {
         $whereConditions[] = "r.request_type_id = :rt";
         $params[':rt'] = $filters['rt'];
     }
-    // กรองหมวดหมู่
     if (!empty($filters['cat'])) {
         $whereConditions[] = "r.category_id = :cat";
         $params[':cat'] = $filters['cat'];
     }
-    // กรองอาการ
     if (!empty($filters['sym'])) {
         $whereConditions[] = "r.symptom_id = :sym";
         $params[':sym'] = $filters['sym'];
     }
-    // กรองสถานะ (ใช้ Subquery เพื่อหาสถานะล่าสุดของตั๋วใบนั้น)
     if (!empty($filters['status'])) {
         $whereConditions[] = "(
             SELECT ts.code 
@@ -120,7 +129,7 @@ function getAllReports(int $limit = 50, int $offset = 0, array $filters = []): a
 
     $whereSql = implode(" AND ", $whereConditions);
 
-    // 2. ดึงข้อมูล Tickets หลัก
+    // 2. ดึงข้อมูล Tickets หลัก (เพิ่มฟิลด์ remark)
     $sqlTickets = "
         SELECT
             r.id,
@@ -128,6 +137,8 @@ function getAllReports(int $limit = 50, int $offset = 0, array $filters = []): a
             r.created_at,
             r.department,
             r.reporter_name,
+            r.category_other_remark, 
+            r.symptom_other_remark,
             rt.name_th      AS request_type_name,
             ct.name_th      AS category_name,
             st.name_th      AS symptom_name
@@ -142,11 +153,9 @@ function getAllReports(int $limit = 50, int $offset = 0, array $filters = []): a
 
     $stmt = $pdo->prepare($sqlTickets);
     
-    // Bind ตัวแปรสำหรับ Filters
     foreach ($params as $key => $val) {
         $stmt->bindValue($key, $val);
     }
-    // Bind ตัวแปรสำหรับ Pagination
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     
@@ -162,6 +171,21 @@ function getAllReports(int $limit = 50, int $offset = 0, array $filters = []): a
     foreach ($tickets as $ticket) {
         $id = (int)$ticket['id'];
         $ticketIds[] = $id;
+        
+        // จัดการ Format การแสดงผลหมวดหมู่
+        $catName = $ticket['category_name'] ?? '';
+        if (!empty($ticket['category_other_remark'])) {
+            $catName = $catName ? $catName . ' (' . $ticket['category_other_remark'] . ')' : $ticket['category_other_remark'];
+        }
+        $ticket['display_category'] = $catName ?: '-';
+
+        // จัดการ Format การแสดงผลอาการ
+        $symName = $ticket['symptom_name'] ?? '';
+        if (!empty($ticket['symptom_other_remark'])) {
+            $symName = $symName ? $symName . ' (' . $ticket['symptom_other_remark'] . ')' : $ticket['symptom_other_remark'];
+        }
+        $ticket['display_symptom'] = $symName ?: '-';
+
         $ticket['id'] = $id;
         $ticket['ticket_status_logs'] = [];
         $reports[$id] = $ticket;
@@ -189,7 +213,6 @@ function getAllReports(int $limit = 50, int $offset = 0, array $filters = []): a
     $stmtLogs->execute($ticketIds);
     $logs = $stmtLogs->fetchAll(PDO::FETCH_ASSOC);
 
-    // ประกอบร่าง Logs
     foreach ($logs as $log) {
         $tId = (int)$log['ticket_id'];
         if (isset($reports[$tId]) && count($reports[$tId]['ticket_status_logs']) < 3) {
@@ -269,6 +292,8 @@ function getReportDetails(string $code): ?array {
             r.sla_due_at,   
             r.department,
             r.reporter_name,
+            r.category_other_remark, 
+            r.symptom_other_remark,
             rt.name_th      AS request_type_name,
             ct.name_th      AS category_name,
             st.name_th      AS symptom_name,
@@ -303,6 +328,18 @@ function getReportDetails(string $code): ?array {
 
     $first = $rows[0];
 
+    // จัดการ Format การแสดงผลหมวดหมู่
+    $catName = $first['category_name'] ?? '';
+    if (!empty($first['category_other_remark'])) {
+        $catName = $catName ? $catName . ' (' . $first['category_other_remark'] . ')' : $first['category_other_remark'];
+    }
+
+    // จัดการ Format การแสดงผลอาการ
+    $symName = $first['symptom_name'] ?? '';
+    if (!empty($first['symptom_other_remark'])) {
+        $symName = $symName ? $symName . ' (' . $first['symptom_other_remark'] . ')' : $first['symptom_other_remark'];
+    }
+
     $work = [
         'id'                 => (int)$first['id'],
         'code'               => $first['code'],
@@ -313,8 +350,8 @@ function getReportDetails(string $code): ?array {
         'department'         => $first['department'],
         'reporter_name'      => $first['reporter_name'],
         'request_type_name'  => $first['request_type_name'],
-        'category_name'      => $first['category_name'],
-        'symptom_name'       => $first['symptom_name'],
+        'display_category'   => $catName ?: '-',    // เพิ่มฟิลด์ใหม่สำหรับแสดงผล
+        'display_symptom'    => $symName ?: '-',    // เพิ่มฟิลด์ใหม่สำหรับแสดงผล
         'ticket_status_logs' => [],
     ];
 

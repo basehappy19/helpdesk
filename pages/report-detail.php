@@ -57,6 +57,7 @@ if ($reportDetails === null) {
             z-index: 99999;
             pointer-events: none;
         }
+
         .hot-toast.show {
             transform: translateX(-50%) translateY(0) scale(1);
             opacity: 1;
@@ -68,7 +69,7 @@ if ($reportDetails === null) {
     <?php include './components/navbar.php'; ?>
 
     <div id="toast-container"></div>
-    
+
     <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen py-8 px-4">
         <div class="max-w-5xl mx-auto">
 
@@ -150,20 +151,20 @@ if ($reportDetails === null) {
                                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                                             </svg>
-                                            <?= htmlspecialchars($reportDetails['category_name'] ?? '-') ?>
+                                            <?= htmlspecialchars($reportDetails['display_category'] ?? '-') ?>
                                         </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mt-5">
                                 <p class="text-sm font-medium text-red-700 mb-1.5 flex items-center">
                                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                     </svg>
                                     อาการ/ปัญหา
                                 </p>
-                                <p class="text-base text-red-900 font-medium"><?= htmlspecialchars($reportDetails['symptom_name'] ?? '-') ?></p>
+                                <p class="text-base text-red-900 font-medium"><?= htmlspecialchars($reportDetails['display_symptom'] ?? '-') ?></p>
                             </div>
                         </div>
                     </div>
@@ -202,7 +203,7 @@ if ($reportDetails === null) {
 
                                                 <div class="ml-16 flex-grow">
                                                     <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all relative">
-                                                        
+
                                                         <?php if ($canEditStatus): ?>
                                                             <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
                                                                 <button onclick="openEditStatusModal(<?= htmlspecialchars(json_encode($log)) ?>)" class="p-1.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors" title="แก้ไข">
@@ -219,7 +220,9 @@ if ($reportDetails === null) {
                                                         <?php endif; ?>
 
                                                         <p class="text-xs text-gray-500 mb-2 flex items-center">
-                                                            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                            </svg>
                                                             <?= htmlspecialchars(formatDateThaiBuddhist($log['status_changed_at'])) ?>
                                                         </p>
                                                         <p class="text-xs text-gray-500 mb-2 flex items-center">
@@ -237,10 +240,14 @@ if ($reportDetails === null) {
                                                                 <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium <?= htmlspecialchars($log['status_from_style'] ?? 'bg-gray-100 text-gray-800') ?>">
                                                                     <?= htmlspecialchars($log['from_status_name']) ?>
                                                                 </span>
-                                                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                                                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                                </svg>
                                                             <?php else: ?>
                                                                 <span class="text-sm text-gray-500 italic">เริ่มต้น</span>
-                                                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                                                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                                </svg>
                                                             <?php endif; ?>
 
                                                             <span class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium <?= htmlspecialchars($log['status_to_style'] ?? 'bg-gray-100 text-gray-800') ?>">
@@ -261,7 +268,7 @@ if ($reportDetails === null) {
                 </div>
 
                 <div class="lg:col-span-1 space-y-6">
-                    
+
                     <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                         <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4">
                             <h3 class="text-white font-semibold flex items-center">
@@ -272,7 +279,7 @@ if ($reportDetails === null) {
                             </h3>
                         </div>
                         <div class="p-6 space-y-5">
-                            
+
                             <div class="relative">
                                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่แจ้งเรื่อง</p>
                                 <p class="text-sm font-medium text-gray-800">
@@ -288,7 +295,9 @@ if ($reportDetails === null) {
                                     </p>
                                 <?php else: ?>
                                     <p class="text-sm font-medium text-yellow-500 flex items-center">
-                                        <svg class="w-4 h-4 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                        <svg class="w-4 h-4 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                        </svg>
                                         กำลังรอรับเรื่อง...
                                     </p>
                                 <?php endif; ?>
@@ -320,7 +329,7 @@ if ($reportDetails === null) {
                                 <?php endif; ?>
                             </div>
 
-                            <?php if (!empty($reportDetails['accepted_at']) && !empty($reportDetails['resolved_at'])): 
+                            <?php if (!empty($reportDetails['accepted_at']) && !empty($reportDetails['resolved_at'])):
                                 $diffSeconds = strtotime($reportDetails['resolved_at']) - strtotime($reportDetails['accepted_at']);
                                 $mins = floor($diffSeconds / 60);
                                 $hours = floor($mins / 60);
@@ -333,22 +342,24 @@ if ($reportDetails === null) {
                                     $isPassSLA = strtotime($reportDetails['resolved_at']) <= strtotime($reportDetails['sla_due_at']);
                                 }
                             ?>
-                            <div class="mt-2 pt-4 border-t-2 border-dashed border-gray-200">
-                                <div class="flex items-center justify-between mb-1">
-                                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">ใช้เวลาแก้ไขรวม</p>
-                                    <?php if (!empty($reportDetails['sla_due_at'])): ?>
-                                        <?php if ($isPassSLA): ?>
-                                            <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">✅ ผ่าน SLA</span>
-                                        <?php else: ?>
-                                            <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">❌ เกิน SLA</span>
+                                <div class="mt-2 pt-4 border-t-2 border-dashed border-gray-200">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">ใช้เวลาแก้ไขรวม</p>
+                                        <?php if (!empty($reportDetails['sla_due_at'])): ?>
+                                            <?php if ($isPassSLA): ?>
+                                                <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">✅ ผ่าน SLA</span>
+                                            <?php else: ?>
+                                                <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">❌ เกิน SLA</span>
+                                            <?php endif; ?>
                                         <?php endif; ?>
-                                    <?php endif; ?>
+                                    </div>
+                                    <p class="text-lg font-bold <?= $isPassSLA ? 'text-emerald-600' : 'text-red-600' ?> flex items-center">
+                                        <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <?= $timeStr ?>
+                                    </p>
                                 </div>
-                                <p class="text-lg font-bold <?= $isPassSLA ? 'text-emerald-600' : 'text-red-600' ?> flex items-center">
-                                    <svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    <?= $timeStr ?>
-                                </p>
-                            </div>
                             <?php endif; ?>
 
                         </div>
@@ -391,10 +402,14 @@ if ($reportDetails === null) {
             <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all relative w-full">
                 <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 rounded-t-2xl flex justify-between items-center">
                     <h3 class="text-lg font-bold text-white flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
                         เพิ่มสถานะใหม่
                     </h3>
-                    <button type="button" onclick="closeAddStatusModal()" class="text-white/80 hover:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                    <button type="button" onclick="closeAddStatusModal()" class="text-white/80 hover:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg></button>
                 </div>
                 <form id="addStatusForm" class="p-6 space-y-4">
                     <input type="hidden" name="work_id" value="<?= htmlspecialchars($reportDetails['id'] ?? '') ?>">
@@ -435,10 +450,14 @@ if ($reportDetails === null) {
             <div class="bg-white rounded-2xl shadow-2xl max-w-md transform transition-all relative w-full">
                 <div class="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4 rounded-t-2xl flex justify-between items-center">
                     <h3 class="text-lg font-bold text-white flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
                         แก้ไขสถานะ
                     </h3>
-                    <button type="button" onclick="closeEditStatusModal()" class="text-white/80 hover:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                    <button type="button" onclick="closeEditStatusModal()" class="text-white/80 hover:text-white"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg></button>
                 </div>
                 <form id="editStatusForm" class="p-6 space-y-4">
                     <input type="hidden" name="log_id" id="edit_log_id">
@@ -498,18 +517,18 @@ if ($reportDetails === null) {
                 const container = document.getElementById('toast-container');
                 const toast = document.createElement('div');
                 toast.className = 'hot-toast';
-                
-                let iconHtml = type === 'success' 
-                    ? `<svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>`
-                    : `<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>`;
-                
+
+                let iconHtml = type === 'success' ?
+                    `<svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>` :
+                    `<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>`;
+
                 toast.innerHTML = `${iconHtml} <span>${message}</span>`;
                 container.appendChild(toast);
-                
+
                 requestAnimationFrame(() => toast.classList.add('show'));
-                setTimeout(() => { 
-                    toast.classList.remove('show'); 
-                    setTimeout(() => toast.remove(), 400); 
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 400);
                 }, 3000);
             }
 
@@ -539,6 +558,7 @@ if ($reportDetails === null) {
                 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
                 document.querySelector('#addStatusForm input[name="status_changed_at"]').value = now.toISOString().slice(0, 16);
             }
+
             function closeAddStatusModal() {
                 const modal = document.getElementById('addStatusModal');
                 modal.classList.add('hidden');
@@ -559,11 +579,13 @@ if ($reportDetails === null) {
                 const select = document.getElementById('edit_to_status');
                 for (let option of select.options) {
                     if (option.text.trim() === log.to_status_name.trim()) {
-                        option.selected = true; break;
+                        option.selected = true;
+                        break;
                     }
                 }
                 if (log.status_changed_at) document.getElementById('status_changed_at').value = log.status_changed_at;
             }
+
             function closeEditStatusModal() {
                 const modal = document.getElementById('editStatusModal');
                 modal.classList.add('hidden');
@@ -577,6 +599,7 @@ if ($reportDetails === null) {
                 document.getElementById('deleteStatusModal').classList.remove('hidden');
                 document.getElementById('deleteStatusModal').classList.add('flex');
             }
+
             function closeDeleteStatusModal() {
                 const modal = document.getElementById('deleteStatusModal');
                 modal.classList.add('hidden');
@@ -587,52 +610,61 @@ if ($reportDetails === null) {
             function deleteStatus() {
                 const logId = document.getElementById('delete_log_id').value;
                 fetch('/api/statuses/delete.php', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: logId })
-                })
-                .then(r => r.json())
-                .then(d => { 
-                    if (d.ok) reloadWithToast('ลบสถานะเรียบร้อยแล้ว', 'success'); 
-                    else showToast('Error: ' + (d.message || 'ไม่สามารถลบข้อมูลได้'), 'error'); 
-                })
-                .catch(e => showToast('Error: ' + e.message, 'error'))
-                .finally(() => closeDeleteStatusModal());
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            id: logId
+                        })
+                    })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.ok) reloadWithToast('ลบสถานะเรียบร้อยแล้ว', 'success');
+                        else showToast('Error: ' + (d.message || 'ไม่สามารถลบข้อมูลได้'), 'error');
+                    })
+                    .catch(e => showToast('Error: ' + e.message, 'error'))
+                    .finally(() => closeDeleteStatusModal());
             }
 
             document.getElementById('addStatusForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const data = Object.fromEntries(new FormData(this).entries());
                 fetch('/api/statuses/add.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                })
-                .then(r => r.json())
-                .then(d => { 
-                    if (d.ok) reloadWithToast('เพิ่มสถานะสำเร็จ', 'success'); 
-                    else showToast('Error: ' + (d.message || 'ไม่สามารถเพิ่มข้อมูลได้'), 'error'); 
-                })
-                .catch(e => showToast('Error: ' + e.message, 'error'));
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.ok) reloadWithToast('เพิ่มสถานะสำเร็จ', 'success');
+                        else showToast('Error: ' + (d.message || 'ไม่สามารถเพิ่มข้อมูลได้'), 'error');
+                    })
+                    .catch(e => showToast('Error: ' + e.message, 'error'));
             });
 
             document.getElementById('editStatusForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const data = Object.fromEntries(new FormData(this).entries());
                 fetch('/api/statuses/update.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                })
-                .then(r => r.json())
-                .then(d => { 
-                    if (d.ok) reloadWithToast('อัปเดตสถานะสำเร็จ', 'success'); 
-                    else showToast('Error: ' + (d.message || 'ไม่สามารถแก้ไขข้อมูลได้'), 'error'); 
-                })
-                .catch(e => showToast('Error: ' + e.message, 'error'));
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.ok) reloadWithToast('อัปเดตสถานะสำเร็จ', 'success');
+                        else showToast('Error: ' + (d.message || 'ไม่สามารถแก้ไขข้อมูลได้'), 'error');
+                    })
+                    .catch(e => showToast('Error: ' + e.message, 'error'));
             });
         </script>
     <?php endif; ?>
 
 </body>
+
 </html>

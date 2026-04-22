@@ -5,18 +5,15 @@ global $pdo;
 // 1. DATA PREPARATION (Controller Logic)
 // ==========================================
 
-// 1.1 สรุปภาพรวม (Overview Cards)
 $totalTickets = $pdo->query("SELECT COUNT(*) FROM tickets")->fetchColumn();
 $completedTickets = $pdo->query("SELECT COUNT(*) FROM tickets WHERE resolved_at IS NOT NULL")->fetchColumn();
 $pendingTickets = $totalTickets - $completedTickets;
 
-// 1.2 คำนวณ SLA ภาพรวม (เฉพาะงานที่ทำเสร็จและมีการตั้งเป้าหมาย SLA)
 $slaPass = $pdo->query("SELECT COUNT(*) FROM tickets WHERE resolved_at IS NOT NULL AND sla_due_at IS NOT NULL AND resolved_at <= sla_due_at")->fetchColumn();
 $slaFail = $pdo->query("SELECT COUNT(*) FROM tickets WHERE resolved_at IS NOT NULL AND sla_due_at IS NOT NULL AND resolved_at > sla_due_at")->fetchColumn();
 $slaTotal = $slaPass + $slaFail;
 $slaPassRate = $slaTotal > 0 ? round(($slaPass / $slaTotal) * 100, 2) : 0;
 
-// 1.3 กราฟ: ท็อป 5 แผนกที่แจ้งปัญหามากที่สุด
 $deptStats = $pdo->query("
     SELECT COALESCE(department, 'ไม่ระบุ') as label, COUNT(*) as count 
     FROM tickets 
@@ -24,7 +21,6 @@ $deptStats = $pdo->query("
     ORDER BY count DESC LIMIT 5
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// 1.5 กราฟ: แนวโน้มการแจ้งปัญหาใน 7 วันล่าสุด
 $trendStats = $pdo->query("
     SELECT DATE(created_at) as date_val, COUNT(*) as count
     FROM tickets
@@ -42,33 +38,36 @@ foreach ($trendStats as $row) {
     $trendData[$row['date_val']] = (int)$row['count'];
 }
 
-// ==========================================
-// 1.6 🟢 ข้อมูลเจาะลึก: อาการ, หมวดหมู่ และ SLA 🟢
-// ==========================================
-// คิวรีนี้จะรวบรวมข้อมูลทุกตั๋ว แยกตามอาการ (Symptom) 
-// และนับจำนวนทั้งหมด, รอซ่อม, ซ่อมเสร็จ, ผ่าน SLA, ตก SLA
 $symptomStats = $pdo->query("
     SELECT 
-        c.name_th as category_name,
-        s.name_th as symptom_name,
-        s.sla_minutes,
+        IF(t.category_other_remark IS NOT NULL AND t.category_other_remark != '', 
+           IF(c.name_th IS NOT NULL, CONCAT(c.name_th, ' (', t.category_other_remark, ')'), t.category_other_remark), 
+           COALESCE(c.name_th, 'ไม่ระบุ')
+        ) AS display_category,
+
+        IF(t.symptom_other_remark IS NOT NULL AND t.symptom_other_remark != '', 
+           IF(s.name_th IS NOT NULL, CONCAT(s.name_th, ' (', t.symptom_other_remark, ')'), t.symptom_other_remark), 
+           COALESCE(s.name_th, 'ไม่ระบุ')
+        ) AS display_symptom,
+
+        MAX(s.sla_minutes) as sla_minutes,
         COUNT(t.id) as total_tickets,
         COUNT(CASE WHEN t.resolved_at IS NULL THEN 1 END) as pending_tickets,
         COUNT(CASE WHEN t.resolved_at IS NOT NULL THEN 1 END) as resolved_tickets,
         COUNT(CASE WHEN t.resolved_at IS NOT NULL AND t.sla_due_at IS NOT NULL AND t.resolved_at <= t.sla_due_at THEN 1 END) as sla_pass,
         COUNT(CASE WHEN t.resolved_at IS NOT NULL AND t.sla_due_at IS NOT NULL AND t.resolved_at > t.sla_due_at THEN 1 END) as sla_fail
-    FROM issue_symptoms s
-    LEFT JOIN issue_categories c ON s.category_id = c.id
-    LEFT JOIN tickets t ON s.id = t.symptom_id
-    GROUP BY s.id
-    HAVING total_tickets > 0
-    ORDER BY total_tickets DESC, c.name_th ASC
+    FROM tickets t
+    LEFT JOIN issue_categories c ON t.category_id = c.id
+    LEFT JOIN issue_symptoms s ON t.symptom_id = s.id
+    GROUP BY display_category, display_symptom
+    ORDER BY total_tickets DESC, display_category ASC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -82,7 +81,7 @@ $symptomStats = $pdo->query("
     <?php include './components/navbar.php'; ?>
 
     <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        
+
         <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-slate-900 flex items-center">
@@ -102,7 +101,9 @@ $symptomStats = $pdo->query("
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex items-center relative overflow-hidden">
                 <div class="absolute right-0 top-0 w-2 h-full bg-blue-500"></div>
                 <div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mr-4 text-blue-600">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-slate-500 mb-1">รับแจ้งทั้งหมด</p>
@@ -113,7 +114,9 @@ $symptomStats = $pdo->query("
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex items-center relative overflow-hidden">
                 <div class="absolute right-0 top-0 w-2 h-full bg-amber-400"></div>
                 <div class="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mr-4 text-amber-500">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-slate-500 mb-1">กำลังดำเนินการ</p>
@@ -124,7 +127,9 @@ $symptomStats = $pdo->query("
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex items-center relative overflow-hidden">
                 <div class="absolute right-0 top-0 w-2 h-full bg-emerald-500"></div>
                 <div class="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mr-4 text-emerald-600">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-slate-500 mb-1">แก้ไขเสร็จสิ้น</p>
@@ -135,7 +140,9 @@ $symptomStats = $pdo->query("
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex items-center relative overflow-hidden">
                 <div class="absolute right-0 top-0 w-2 h-full <?= $slaPassRate >= 80 ? 'bg-indigo-500' : 'bg-red-500' ?>"></div>
                 <div class="w-14 h-14 rounded-full <?= $slaPassRate >= 80 ? 'bg-indigo-50' : 'bg-red-50' ?> flex items-center justify-center mr-4 <?= $slaPassRate >= 80 ? 'text-indigo-600' : 'text-red-500' ?>">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
                 </div>
                 <div>
                     <p class="text-sm font-medium text-slate-500 mb-1">ความสำเร็จตาม SLA</p>
@@ -147,7 +154,9 @@ $symptomStats = $pdo->query("
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                    <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                    </svg>
                     รายงานรายละเอียดปัญหาและการประเมิน SLA
                 </h3>
             </div>
@@ -167,14 +176,16 @@ $symptomStats = $pdo->query("
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         <?php if (empty($symptomStats)): ?>
-                            <tr><td colspan="8" class="px-6 py-8 text-center text-slate-400">ยังไม่มีข้อมูลการแจ้งปัญหา</td></tr>
+                            <tr>
+                                <td colspan="8" class="px-6 py-8 text-center text-slate-400">ยังไม่มีข้อมูลการแจ้งปัญหา</td>
+                            </tr>
                         <?php else: ?>
-                            <?php foreach ($symptomStats as $stat): 
+                            <?php foreach ($symptomStats as $stat):
                                 // คำนวณเปอร์เซ็นต์ เฉพาะตั๋วที่ซ่อมเสร็จแล้ว
                                 $totalDone = (int)$stat['resolved_tickets'];
                                 $passCount = (int)$stat['sla_pass'];
                                 $rate = $totalDone > 0 ? round(($passCount / $totalDone) * 100, 2) : 0;
-                                
+
                                 // กำหนดสี
                                 $rateColor = 'text-slate-500';
                                 $rateBadge = 'bg-slate-100 text-slate-600';
@@ -188,38 +199,38 @@ $symptomStats = $pdo->query("
                                     }
                                 }
                             ?>
-                            <tr class="hover:bg-slate-50 transition-colors">
-                                <td class="px-6 py-4 text-sm font-medium text-slate-700">
-                                    <?= htmlspecialchars($stat['category_name'] ?? 'ไม่ระบุ') ?>
-                                </td>
-                                <td class="px-6 py-4 text-sm text-slate-600">
-                                    <?= htmlspecialchars($stat['symptom_name'] ?? 'ไม่ระบุ') ?>
-                                </td>
-                                <td class="px-4 py-4 text-sm text-center font-bold text-blue-600">
-                                    <?= number_format($stat['total_tickets']) ?>
-                                </td>
-                                <td class="px-4 py-4 text-sm text-center font-medium text-amber-500">
-                                    <?= number_format($stat['pending_tickets']) ?>
-                                </td>
-                                <td class="px-4 py-4 text-sm text-center text-slate-500">
-                                    <?= $stat['sla_minutes'] ?> นาที
-                                </td>
-                                <td class="px-4 py-4 text-sm text-center font-bold text-emerald-500 bg-emerald-50/30">
-                                    <?= number_format($stat['sla_pass']) ?>
-                                </td>
-                                <td class="px-4 py-4 text-sm text-center font-bold text-red-500 bg-red-50/30">
-                                    <?= number_format($stat['sla_fail']) ?>
-                                </td>
-                                <td class="px-6 py-4 text-sm text-center">
-                                    <?php if ($totalDone > 0): ?>
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold <?= $rateBadge ?>">
-                                            <?= $rate ?>%
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="text-xs text-slate-400">-</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-6 py-4 text-sm font-medium text-slate-700">
+                                        <?= htmlspecialchars($stat['display_category'] ?? 'ไม่ระบุ') ?>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-slate-600">
+                                        <?= htmlspecialchars($stat['display_symptom'] ?? 'ไม่ระบุ') ?>
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-center font-bold text-blue-600">
+                                        <?= number_format($stat['total_tickets']) ?>
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-center font-medium text-amber-500">
+                                        <?= number_format($stat['pending_tickets']) ?>
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-center text-slate-500">
+                                        <?= $stat['sla_minutes'] ? $stat['sla_minutes'] . ' นาที' : '-' ?>
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-center font-bold text-emerald-500 bg-emerald-50/30">
+                                        <?= number_format($stat['sla_pass']) ?>
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-center font-bold text-red-500 bg-red-50/30">
+                                        <?= number_format($stat['sla_fail']) ?>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-center">
+                                        <?php if ($totalDone > 0): ?>
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold <?= $rateBadge ?>">
+                                                <?= $rate ?>%
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-xs text-slate-400">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
@@ -228,7 +239,7 @@ $symptomStats = $pdo->query("
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            
+
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                 <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider mb-4">ผลการประเมิน SLA</h3>
                 <div class="relative h-64 w-full flex justify-center">
@@ -255,7 +266,7 @@ $symptomStats = $pdo->query("
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            
+
             Chart.defaults.font.family = "'Sarabun', 'Prompt', sans-serif";
             Chart.defaults.color = '#64748b';
 
@@ -273,20 +284,26 @@ $symptomStats = $pdo->query("
                     }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '70%',
-                    plugins: { legend: { position: 'bottom' } }
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
                 }
             });
 
             // 3. Trend Line Chart
-            <?php 
-                $trendLabels = array_keys($trendData);
-                $trendValues = array_values($trendData);
-                $formattedLabels = array_map(function($d) {
-                    $months = ["","ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
-                    $time = strtotime($d);
-                    return date('j', $time) . ' ' . $months[date('n', $time)];
-                }, $trendLabels);
+            <?php
+            $trendLabels = array_keys($trendData);
+            $trendValues = array_values($trendData);
+            $formattedLabels = array_map(function ($d) {
+                $months = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+                $time = strtotime($d);
+                return date('j', $time) . ' ' . $months[date('n', $time)];
+            }, $trendLabels);
             ?>
             const ctxTrend = document.getElementById('trendChart').getContext('2d');
             new Chart(ctxTrend, {
@@ -298,21 +315,38 @@ $symptomStats = $pdo->query("
                         data: <?= json_encode($trendValues) ?>,
                         borderColor: '#6366f1',
                         backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                        borderWidth: 3, fill: true, tension: 0.4,
-                        pointBackgroundColor: '#ffffff', pointBorderColor: '#6366f1', pointBorderWidth: 2, pointRadius: 4
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#6366f1',
+                        pointBorderWidth: 2,
+                        pointRadius: 4
                     }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
                 }
             });
 
             // 4. Top Departments Bar Chart
-            <?php 
-                $deptLabels = array_column($deptStats, 'label');
-                $deptValues = array_column($deptStats, 'count');
+            <?php
+            $deptLabels = array_column($deptStats, 'label');
+            $deptValues = array_column($deptStats, 'count');
             ?>
             const ctxDept = document.getElementById('deptChart').getContext('2d');
             new Chart(ctxDept, {
@@ -323,16 +357,30 @@ $symptomStats = $pdo->query("
                         label: 'จำนวน (รายการ)',
                         data: <?= json_encode($deptValues) ?>,
                         backgroundColor: '#8b5cf6',
-                        borderRadius: 6, barThickness: 40
+                        borderRadius: 6,
+                        barThickness: 40
                     }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
                 }
             });
         });
     </script>
 </body>
+
 </html>

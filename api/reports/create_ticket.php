@@ -61,41 +61,61 @@ try {
     $reqType = getInfoByCode($pdo, 'request_types', $params['request_type']);
     if (!$reqType) throw new RuntimeException('ไม่พบประเภทการแจ้งในระบบ');
 
-    // ดึง/สร้างหมวดหมู่ (Category)
+    // จัดการหมวดหมู่ (Category) แบบ Hybrid
+    $categoryId = null;
+    $categoryRemark = null;
+    $categoryName = '-';
+
     if ($params['category'] === '__other__') {
-        $cat = createCategoryWithCode($pdo, (int)$reqType['id'], $params['category_other']);
-        $categoryId = $cat['id'];
+        // กรณีไม่มี Code ส่งมา แต่พิมพ์ค่าอื่นๆ มา
+        $categoryRemark = $params['category_other'];
         $categoryName = $params['category_other'];
     } else {
+        // กรณีส่ง Code มา (อาจเป็น Code หมวดปกติ หรือ Code ของหมวด "อื่นๆ")
         $cat = getInfoByCode($pdo, 'issue_categories', $params['category']);
         if (!$cat) throw new RuntimeException('ไม่พบหมวดหมู่ปัญหาในระบบ');
         $categoryId = (int)$cat['id'];
         $categoryName = $cat['name_th'];
+        
+        if ($params['category_other'] !== '') {
+            $categoryRemark = $params['category_other'];
+            $categoryName .= " (" . $params['category_other'] . ")";
+        }
     }
 
-    // ดึง/สร้างอาการ (Symptom)
+    // จัดการอาการ (Symptom) แบบ Hybrid
+    $symptomId = null;
+    $symptomRemark = null;
+    $symptomName = '-';
+
     if ($params['symptom'] === '__other__') {
-        $sym = createSymptomWithCode($pdo, $categoryId, $params['symptom_other']);
-        $symptomId = $sym['id'];
+        $symptomRemark = $params['symptom_other'];
         $symptomName = $params['symptom_other'];
     } else {
         $sym = getInfoByCode($pdo, 'issue_symptoms', $params['symptom']);
         if (!$sym) throw new RuntimeException('ไม่พบอาการที่ระบุในระบบ');
         $symptomId = (int)$sym['id'];
         $symptomName = $sym['name_th'];
+
+        if ($params['symptom_other'] !== '') {
+            $symptomRemark = $params['symptom_other'];
+            $symptomName .= " (" . $params['symptom_other'] . ")";
+        }
     }
 
     // บันทึก Ticket
     $ticketPayload = [
-        'request_type_id'   => $reqType['id'],
-        'issue_category_id' => $categoryId,
-        'issue_symptom_id'  => $symptomId,
-        'department'        => $params['department'],
-        'building'          => $params['building'],
-        'floor'             => $params['floor'],
-        'service_point'     => $params['service_point'] ?: null,
-        'phone'             => $params['phone'],
-        'reporter'          => $params['reporter'],
+        'request_type_id'       => $reqType['id'],
+        'issue_category_id'     => $categoryId,
+        'category_other_remark' => $categoryRemark,
+        'issue_symptom_id'      => $symptomId,
+        'symptom_other_remark'  => $symptomRemark,
+        'department'            => $params['department'],
+        'building'              => $params['building'],
+        'floor'                 => $params['floor'],
+        'service_point'         => $params['service_point'] ?: null,
+        'phone'                 => $params['phone'],
+        'reporter'              => $params['reporter'],
     ];
 
     $result = insertTicketWithCode($pdo, $ticketPayload);
@@ -131,8 +151,8 @@ try {
 function validateInput(array $p): array {
     $e = [];
     if (!$p['request_type']) $e[] = 'กรุณาระบุประเภทการแจ้ง';
-    if (!$p['category'])     $e[] = 'กรุณาระบุหมวดหมู่ปัญหา';
-    if (!$p['symptom'])      $e[] = 'กรุณาระบุอาการ';
+    if (!$p['category'] && !$p['category_other']) $e[] = 'กรุณาระบุหมวดหมู่ปัญหา';
+    if (!$p['symptom'] && !$p['symptom_other'])   $e[] = 'กรุณาระบุอาการ';
     if (!$p['department'])   $e[] = 'กรุณาระบุหน่วยงาน';
     if (!$p['reporter'])     $e[] = 'กรุณาระบุชื่อผู้แจ้ง';
     return $e;
@@ -145,20 +165,33 @@ function getInfoByCode(PDO $pdo, string $table, string $code): ?array {
 }
 
 function insertTicketWithCode(PDO $pdo, array $data, int $maxRetry = 5): array {
-    $sql = "INSERT INTO tickets (code, request_type_id, category_id, symptom_id, department, building, floor, service_point, phone_ext, reporter_name) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO tickets (
+                code, request_type_id, category_id, category_other_remark, 
+                symptom_id, symptom_other_remark, department, building, 
+                floor, service_point, phone_ext, reporter_name
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
     for ($i = 0; $i < $maxRetry; $i++) {
         $code = generateTicketCode();
         try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $code, $data['request_type_id'], $data['issue_category_id'], $data['issue_symptom_id'],
-                $data['department'], $data['building'], $data['floor'], $data['service_point'], $data['phone'], $data['reporter']
+                $code, 
+                $data['request_type_id'], 
+                $data['issue_category_id'], 
+                $data['category_other_remark'],
+                $data['issue_symptom_id'], 
+                $data['symptom_other_remark'],
+                $data['department'], 
+                $data['building'], 
+                $data['floor'], 
+                $data['service_point'], 
+                $data['phone'], 
+                $data['reporter']
             ]);
             return ['ok' => true, 'code' => $code, 'id' => (int)$pdo->lastInsertId()];
         } catch (PDOException $e) {
-            if ((int)($e->errorInfo[1] ?? 0) === 1062) continue; // ซ้ำให้ลองใหม่
+            if ((int)($e->errorInfo[1] ?? 0) === 1062) continue;
             throw $e;
         }
     }
@@ -174,8 +207,8 @@ function formatTelegramMessage($code, $p, $reqType, $cat, $sym, $url): string {
     $msg .= "<b>สถานที่:</b> ตึก {$p['building']} ชั้น {$p['floor']} (" . ($p['service_point'] ?: '-') . ")\n";
     $msg .= "----------------------------------\n";
     $msg .= "<b>ประเภทงาน:</b> {$reqType}\n";
-    $msg .= "<b>ปัญหา:</b> {$cat}\n";
-    $msg .= "<b>อาการ:</b> {$sym}\n";
+    $msg .= "<b>ปัญหา:</b> " . htmlspecialchars($cat) . "\n";
+    $msg .= "<b>อาการ:</b> " . htmlspecialchars($sym) . "\n";
     $msg .= "----------------------------------\n";
     $msg .= "🔗 <a href='{$url}/?page=report-detail&code={$code}'>ดูรายละเอียดรายงาน</a>";
     return $msg;
@@ -201,18 +234,4 @@ function sendTelegramAlert(string $message): void {
 
 function generateTicketCode(): string {
     return strtoupper("H" . base_convert((string)time(), 10, 36) . "-" . base_convert((string)random_int(100, 1295), 10, 36));
-}
-
-function createCategoryWithCode(PDO $pdo, int $reqId, string $name): array {
-    $code = "CAT-" . date('Ymd') . "-" . strtoupper(bin2hex(random_bytes(2)));
-    $stmt = $pdo->prepare("INSERT INTO issue_categories (request_type_id, code, name_th) VALUES (?, ?, ?)");
-    $stmt->execute([$reqId, $code, $name]);
-    return ['id' => $pdo->lastInsertId()];
-}
-
-function createSymptomWithCode(PDO $pdo, int $catId, string $name): array {
-    $code = "SYM-" . date('Ymd') . "-" . strtoupper(bin2hex(random_bytes(2)));
-    $stmt = $pdo->prepare("INSERT INTO issue_symptoms (category_id, code, name_th) VALUES (?, ?, ?)");
-    $stmt->execute([$catId, $code, $name]);
-    return ['id' => $pdo->lastInsertId()];
 }

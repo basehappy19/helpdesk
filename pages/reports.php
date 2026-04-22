@@ -162,15 +162,15 @@ $statusList = getStatuses();
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="text-sm font-medium text-gray-900">
-                                                <?php echo htmlspecialchars($report['category_name'] ?? ''); ?>
+                                                <?php echo htmlspecialchars($report['display_category'] ?? '-'); ?>
                                             </div>
 
                                             <div class="text-sm text-gray-500 mt-0.5 line-clamp-1">
-                                                <?php echo htmlspecialchars($report['symptom_name'] ?? ''); ?>
+                                                <?php echo htmlspecialchars($report['display_symptom'] ?? '-'); ?>
                                             </div>
 
                                             <div class="text-xs text-indigo-500 mt-1 bg-indigo-50 inline-block px-2 py-0.5 rounded">
-                                                <?php echo htmlspecialchars($report['request_type_name'] ?? ''); ?>
+                                                <?php echo htmlspecialchars($report['request_type_name'] ?? '-'); ?>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">

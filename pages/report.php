@@ -598,13 +598,8 @@
                     return false;
                 }
 
-                // ใช้ async IIFE สำหรับ fetch ภายใน
                 (async () => {
                     const fd = new FormData(form);
-
-                    // แปลง OTHER_VALUE เป็น 'other'
-                    if (fd.get('issue_category') === OTHER_VALUE) fd.set('issue_category', 'other');
-                    if (fd.get('issue_symptom') === OTHER_VALUE) fd.set('issue_symptom', 'other');
 
                     const loadingToast = toast.loading("กำลังส่งคำขอ…");
                     loadingToast.showToast();
@@ -634,7 +629,7 @@
                             requestTypeSelect.value = '';
                         } else {
                             const msg = data?.message || data?.error || `เกิดข้อผิดพลาด (HTTP ${res.status})`;
-                            toast.error("ไม่สามารถส่งข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
+                            toast.error(msg);
                         }
                     } catch (err) {
                         console.error(err);

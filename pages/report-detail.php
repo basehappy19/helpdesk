@@ -444,7 +444,7 @@ if ($reportDetails === null) {
     <?php if ($canEditStatus): ?>
 
         <div id="addStatusModal" class="fixed inset-0 backdrop-blur-sm bg-slate-900/60 hidden items-center justify-center z-[10000] p-4">
-            <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all relative w-full">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-md transform transition-all relative w-full">
                 <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 rounded-t-2xl flex justify-between items-center">
                     <h3 class="text-lg font-bold text-white flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

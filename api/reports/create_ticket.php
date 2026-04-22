@@ -7,12 +7,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../db/conn.php';
 
-// --- Configuration & Error Logging ---
-ini_set('log_errors', 'On');
-ini_set('error_log', __DIR__ . '/debug.log');
-
 try {
-    // ปรับ Path ไปหาไฟล์ .env ให้ถูกต้องตามโครงสร้างโปรเจกต์
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../');
     $dotenv->load();
 } catch (Exception $e) {
@@ -204,7 +199,7 @@ function formatTelegramMessage($code, $p, $reqType, $cat, $sym, $url): string {
     $msg .= "<b>รหัส:</b> <code>{$code}</code>\n";
     $msg .= "<b>ผู้แจ้ง:</b> " . htmlspecialchars($p['reporter']) . " (โทร: {$p['phone']})\n";
     $msg .= "<b>หน่วยงาน:</b> " . htmlspecialchars($p['department']) . "\n";
-    $msg .= "<b>สถานที่:</b> ตึก {$p['building']} ชั้น {$p['floor']} (" . ($p['service_point'] ?: '-') . ")\n";
+    $msg .= "<b>สถานที่:</b> อาคาร {$p['building']} ชั้น {$p['floor']} (" . ($p['service_point'] ?: '-') . ")\n";
     $msg .= "----------------------------------\n";
     $msg .= "<b>ประเภทงาน:</b> {$reqType}\n";
     $msg .= "<b>ปัญหา:</b> " . htmlspecialchars($cat) . "\n";
@@ -217,7 +212,12 @@ function formatTelegramMessage($code, $p, $reqType, $cat, $sym, $url): string {
 function sendTelegramAlert(string $message): void {
     $token = $_ENV['TELEGRAM_BOT_TOKEN'] ?? '';
     $chatId = $_ENV['TELEGRAM_CHAT_ID'] ?? '';
-    if (!$token || !$chatId) return;
+    
+    // ตรวจสอบว่าโหลดตัวแปร .env มาได้หรือไม่
+    if (!$token || !$chatId) {
+        error_log("Telegram Alert Skipped: Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env file");
+        return;
+    }
 
     $url = "https://api.telegram.org/bot{$token}/sendMessage";
     $payload = json_encode(['chat_id' => $chatId, 'text' => $message, 'parse_mode' => 'HTML']);
@@ -228,8 +228,19 @@ function sendTelegramAlert(string $message): void {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_exec($ch);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10); // ป้องกัน cURL ค้าง
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
     curl_close($ch);
+
+    // เช็คผลลัพธ์และเขียนลง Log ถ้าเกิดข้อผิดพลาด
+    if ($response === false) {
+        error_log("Telegram cURL Error: " . $curlError);
+    } elseif ($httpCode >= 400) {
+        error_log("Telegram API Error (HTTP {$httpCode}): " . $response);
+    }
 }
 
 function generateTicketCode(): string {

@@ -21,9 +21,9 @@ $statistics = getStatusStatistics();
     <?php include './components/navbar.php'; ?>
 
     <div class="min-h-screen pb-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="max-w-7xl mx-auto md:px-4 sm:px-6 lg:px-8 py-8">
 
-            <div class="bg-indigo-600 rounded-3xl shadow-sm overflow-hidden mb-8 relative">
+            <div class="bg-indigo-600 md:rounded-3xl shadow-sm overflow-hidden mb-8 relative">
                 <div class="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl"></div>
 
                 <div class="relative px-8 py-10 md:py-12 flex flex-col md:flex-row justify-between items-center gap-6">
@@ -102,7 +102,7 @@ $statistics = getStatusStatistics();
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
-                        <div class="bg-white rounded-2xl border border-gray-100/80 p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:border-indigo-100 hover:shadow-md transition-all duration-200">
+                        <div class="bg-white md:rounded-2xl border border-gray-100/80 p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:border-indigo-100 hover:shadow-md transition-all duration-200">
                             <div class="flex justify-between items-start mb-4">
                                 <div class="flex items-center gap-3">
                                     <div class="bg-indigo-50 rounded-xl p-2.5 text-indigo-500">
@@ -129,7 +129,7 @@ $statistics = getStatusStatistics();
                             $total = array_sum(array_column($statuses, 'total_reports'));
                             $percentage = $total > 0 ? round(($statistic['total_reports'] / $total) * 100, 1) : 0;
                         ?>
-                            <div class="bg-white rounded-2xl border border-gray-100/80 p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:border-gray-200 hover:shadow-md transition-all duration-200 <?php echo $i === $lastIndex ? 'sm:col-span-2 lg:col-span-1' : ''; ?>">
+                            <div class="bg-white md:rounded-2xl border border-gray-100/80 p-5 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:border-gray-200 hover:shadow-md transition-all duration-200 <?php echo $i === $lastIndex ? 'sm:col-span-2 lg:col-span-1' : ''; ?>">
                                 <div class="flex justify-between items-start mb-4">
                                     <div class="flex items-center gap-3">
                                         <div class="<?php echo $style['iconBg']; ?> rounded-xl p-2.5 <?php echo $style['iconColor']; ?>">
@@ -154,7 +154,7 @@ $statistics = getStatusStatistics();
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-white rounded-2xl border border-gray-100/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-6">
+                        <div class="bg-white md:rounded-2xl border border-gray-100/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-6">
                             <h2 class="text-lg font-bold text-gray-800 mb-5 flex items-center gap-2">
                                 <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
@@ -195,7 +195,7 @@ $statistics = getStatusStatistics();
                             </div>
                         </div>
 
-                        <div class="bg-white rounded-2xl border border-gray-100/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-6 flex flex-col">
+                        <div class="bg-white md:rounded-2xl border border-gray-100/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-6 flex flex-col">
                             <div class="flex items-center justify-between mb-5">
                                 <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
                                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,7 +247,7 @@ $statistics = getStatusStatistics();
 
                 <div class="space-y-6">
                     <?php if (isset($user)): ?>
-                        <div class="bg-white rounded-2xl border border-gray-100/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-6">
+                        <div class="bg-white md:rounded-2xl border border-gray-100/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-6">
                             <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-5">ข้อมูลผู้ใช้</h3>
                             <div class="flex items-center mb-6">
                                 <div class="w-14 h-14 bg-gradient-to-tr from-indigo-500 to-blue-500 rounded-2xl shadow-sm flex items-center justify-center text-white text-xl font-bold">
@@ -268,7 +268,7 @@ $statistics = getStatusStatistics();
                             </div>
                         </div>
                     <?php else: ?>
-                        <div class="bg-white rounded-2xl border border-gray-100/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-6 text-center">
+                        <div class="bg-white md:rounded-2xl border border-gray-100/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-6 text-center">
                             <div class="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-indigo-500">
                                 <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -282,7 +282,7 @@ $statistics = getStatusStatistics();
                         </div>
                     <?php endif; ?>
 
-                    <div class="bg-white rounded-2xl border border-gray-100/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
+                    <div class="bg-white md:rounded-2xl border border-gray-100/80 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
                         <div class="p-6">
                             <div class="flex items-start gap-4 mb-5">
                                 <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">

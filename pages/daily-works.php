@@ -377,9 +377,9 @@ if (isset($_GET['msg'])) {
 
     <?php include './components/navbar.php'; ?>
 
-    <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto py-8 md:px-4 sm:px-6 lg:px-8">
 
-        <div class="mb-8">
+        <div class="mb-8 md:px-0 px-4">
             <h1 class="text-3xl font-bold text-slate-900 mb-2">📝 บันทึกภาระงานประจำวัน</h1>
             <?php if ($message): ?><div class="mt-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded shadow-sm"><?php echo $message; ?></div><?php endif; ?>
 
@@ -398,7 +398,7 @@ if (isset($_GET['msg'])) {
         </div>
 
         <div id="view-table" class="<?= $defaultView === 'table' ? '' : 'hidden' ?> fade-enter-active">
-            <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+            <div class="bg-white md:rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
                 <div class="px-6 py-5 bg-white border-b border-slate-200 flex flex-wrap gap-4 items-center justify-between sticky top-0 z-10 shadow-sm">
                     <form method="get" class="flex items-center gap-3 flex-wrap">
                         <input type="hidden" name="page" value="daily-works">

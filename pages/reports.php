@@ -47,9 +47,9 @@ $statusList = getStatuses();
     <?php include './components/navbar.php'; ?>
 
     <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen pb-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="max-w-7xl mx-auto md:px-4 sm:px-6 lg:px-8 py-8">
 
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div class="flex flex-col md:flex-row md:items-center md:px-0 px-4 justify-between gap-4 mb-8">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">บันทึกทั้งหมด</h1>
                     <p class="text-gray-500 mt-1">รายการแจ้งปัญหาและขอรับบริการทั้งหมดในระบบ (<?php echo number_format($totalReports); ?> รายการ)</p>
@@ -65,7 +65,7 @@ $statusList = getStatuses();
                 </div>
             </div>
 
-            <div class="bg-white rounded-t-2xl shadow-sm border-b border-gray-100 p-4 sm:p-6">
+            <div class="bg-white md:rounded-t-2xl shadow-sm border-b border-gray-100 p-4 sm:p-6">
                 <form id="filterForm" action="./" method="GET" class="flex flex-col gap-4">
                     <input type="hidden" name="page" value="reports">
 

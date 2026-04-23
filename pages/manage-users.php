@@ -50,9 +50,9 @@ $all_users = $manageController->getAllUsers();
     <div id="toast-container"></div>
 
     <div class="min-h-screen pb-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="max-w-7xl mx-auto md:px-4 sm:px-6 lg:px-8 py-8">
             
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div class="md:px-0 px-4 flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">จัดการผู้ใช้งานระบบ</h1>
                     <p class="text-sm text-gray-500 mt-1">เพิ่ม ลบ แก้ไข และจัดการสิทธิ์ของผู้ใช้ทั้งหมด</p>
@@ -63,7 +63,7 @@ $all_users = $manageController->getAllUsers();
                 </button>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-white md:rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm whitespace-nowrap">
                         <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">

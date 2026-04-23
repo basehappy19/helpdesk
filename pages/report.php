@@ -12,7 +12,7 @@
 
 <body>
     <?php include './components/navbar.php'; ?>
-    <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen py-8 px-4">
+    <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen py-8 md:px-4">
         <div class="max-w-7xl mx-auto">
             <div class="mb-6">
                 <a href="./?page=home" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 transition-colors mb-4">

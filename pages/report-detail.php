@@ -115,7 +115,7 @@ if ($reportDetails === null) {
 
     <div id="toast-container"></div>
 
-    <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen py-8 px-4">
+    <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen py-8 md:px-4">
         <div class="max-w-5xl mx-auto">
 
             <div class="mb-6">
@@ -127,13 +127,13 @@ if ($reportDetails === null) {
                 </a>
             </div>
 
-            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-xl p-8 mb-6 text-white">
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 md:rounded-2xl shadow-xl p-8 mb-6 text-white">
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div>
                         <p class="text-indigo-100 text-sm mb-1">รหัสปัญหา</p>
                         <h1 class="text-3xl md:text-4xl font-bold"><?= htmlspecialchars($reportDetails['code'] ?? '') ?></h1>
                     </div>
-                    <div class="text-right">
+                    <div class="md:text-right">
                         <p class="text-indigo-100 text-sm mb-1">หมายเลขอ้างอิง</p>
                         <p class="text-2xl font-semibold">#<?= htmlspecialchars($reportDetails['id'] ?? '') ?></p>
                     </div>
@@ -144,7 +144,7 @@ if ($reportDetails === null) {
 
                 <div class="lg:col-span-2 space-y-6">
 
-                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                    <div class="bg-white md:rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                         <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
                             <h2 class="text-xl font-semibold text-gray-800 flex items-center">
                                 <svg class="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -156,7 +156,7 @@ if ($reportDetails === null) {
 
                         <div class="p-6 space-y-5">
                             <div class="flex items-start">
-                                <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
+                                <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 md:rounded-lg flex items-center justify-center mr-4">
                                     <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                     </svg>
@@ -214,7 +214,7 @@ if ($reportDetails === null) {
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                    <div class="bg-white md:rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                         <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
                             <div class="flex items-center justify-between">
                                 <h2 class="text-xl font-semibold text-gray-800 flex items-center">
@@ -314,7 +314,7 @@ if ($reportDetails === null) {
 
                 <div class="lg:col-span-1 space-y-6">
 
-                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                    <div class="bg-white md:rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                         <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4">
                             <h3 class="text-white font-semibold flex items-center">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -410,7 +410,7 @@ if ($reportDetails === null) {
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                    <div class="bg-white md:rounded-2xl shadow-lg border border-gray-100 p-6">
                         <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                             <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -557,7 +557,6 @@ if ($reportDetails === null) {
         </div>
 
         <script>
-            // Toast Notification System
             function showToast(message, type = 'success') {
                 const container = document.getElementById('toast-container');
                 const toast = document.createElement('div');
@@ -577,7 +576,6 @@ if ($reportDetails === null) {
                 }, 3000);
             }
 
-            // เช็คว่ามีข้อความ Toast ตกค้างจากการโหลดหน้าหรือไม่
             document.addEventListener('DOMContentLoaded', () => {
                 const msg = sessionStorage.getItem('toast_msg');
                 const type = sessionStorage.getItem('toast_type');
@@ -588,20 +586,39 @@ if ($reportDetails === null) {
                 }
             });
 
-            // Helper: บันทึกข้อความและรีเฟรชหน้า
             function reloadWithToast(message, type) {
                 sessionStorage.setItem('toast_msg', message);
                 sessionStorage.setItem('toast_type', type);
                 location.reload();
             }
 
-            // Add Status Modal
+            const logCount = <?= count($reportDetails['ticket_status_logs'] ?? []) ?>;
+            const initialSymptom = <?= json_encode($reportDetails['display_symptom'] ?? '') ?>;
+            const latestLogSymptom = <?= json_encode($reportDetails['ticket_status_logs'][0]['symptom'] ?? '') ?>;
+            
+            const defaultSymptom = latestLogSymptom ? latestLogSymptom : initialSymptom;
+
             function openAddStatusModal() {
                 document.getElementById('addStatusModal').classList.remove('hidden');
                 document.getElementById('addStatusModal').classList.add('flex');
+                
+                // เซ็ตเวลาปัจจุบัน
                 const now = new Date();
                 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
                 document.querySelector('#addStatusForm input[name="status_changed_at"]').value = now.toISOString().slice(0, 16);
+
+                if (logCount === 0 || logCount === 1) {
+                    const statusSelect = document.querySelector('#addStatusForm select[name="to_status_id"]');
+                    const symptomInput = document.getElementById('symptom_input_add');
+                    
+                    if (statusSelect && statusSelect.value === "") {
+                        statusSelect.value = "2"; 
+                    }
+                    
+                    if (symptomInput && symptomInput.value === "") {
+                        symptomInput.value = defaultSymptom; 
+                    }
+                }
             }
 
             function closeAddStatusModal() {
@@ -615,20 +632,28 @@ if ($reportDetails === null) {
             function openEditStatusModal(log) {
                 document.getElementById('editStatusModal').classList.remove('hidden');
                 document.getElementById('editStatusModal').classList.add('flex');
+                
                 document.getElementById('edit_log_id').value = log.id;
                 document.getElementById('symptom_input').value = log.symptom ?? "";
                 document.getElementById('cause_input').value = log.cause ?? "";
                 document.getElementById('solver_by_input').value = log.solver_by ?? "";
-                document.getElementById('sla_input').value = log.sla ?? "";
 
                 const select = document.getElementById('edit_to_status');
-                for (let option of select.options) {
-                    if (option.text.trim() === log.to_status_name.trim()) {
-                        option.selected = true;
-                        break;
+                if (log.to_status_id) {
+                    select.value = log.to_status_id;
+                } else {
+                    for (let option of select.options) {
+                        if (option.text.trim() === (log.to_status_name || "").trim()) {
+                            option.selected = true;
+                            break;
+                        }
                     }
                 }
-                if (log.status_changed_at) document.getElementById('status_changed_at').value = log.status_changed_at;
+
+                if (log.status_changed_at) {
+                    const formattedDate = log.status_changed_at.replace(' ', 'T').substring(0, 16);
+                    document.getElementById('status_changed_at').value = formattedDate;
+                }
             }
 
             function closeEditStatusModal() {
@@ -651,7 +676,7 @@ if ($reportDetails === null) {
                 modal.classList.remove('flex');
             }
 
-            // API Calls (อัปเดตให้ใช้ showToast แทน alert)
+            // API Calls
             function deleteStatus() {
                 const logId = document.getElementById('delete_log_id').value;
                 fetch('/api/statuses/delete.php', {

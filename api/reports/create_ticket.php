@@ -117,8 +117,8 @@ try {
     if (!$result['ok']) throw new RuntimeException($result['error']);
 
     // บันทึก Log สถานะ (รอดำเนินการ = 1)
-    $logStmt = $pdo->prepare("INSERT INTO ticket_status_logs (ticket_id, from_status, to_status) VALUES (?, NULL, 1)");
-    $logStmt->execute([$result['id']]);
+    $logStmt = $pdo->prepare("INSERT INTO ticket_status_logs (ticket_id, from_status, to_status, symptom) VALUES (?, NULL, 1, ?)");
+    $logStmt->execute([$result['id'], $symptomName]);
 
     $pdo->commit();
 
@@ -194,10 +194,17 @@ function insertTicketWithCode(PDO $pdo, array $data, int $maxRetry = 5): array {
 }
 
 function formatTelegramMessage($code, $p, $reqType, $cat, $sym, $url): string {
+    $buddhistYear = (int)date('Y') + 543;
+    $dateTime = date('d/m/') . $buddhistYear . date(' H:i');
+
     $msg = "<b>🛠 มีรายการแจ้งปัญหาใหม่!</b>\n";
     $msg .= "----------------------------------\n";
     $msg .= "<b>รหัส:</b> <code>{$code}</code>\n";
-    $msg .= "<b>ผู้แจ้ง:</b> " . htmlspecialchars($p['reporter']) . " (โทร: {$p['phone']})\n";
+    $msg .= "<b>เวลาแจ้ง:</b> {$dateTime} น.\n"; 
+    
+    $phoneText = !empty($p['phone']) ? " (โทร: {$p['phone']})" : "";
+    $msg .= "<b>ผู้แจ้ง:</b> " . htmlspecialchars($p['reporter']) . $phoneText . "\n";
+    
     $msg .= "<b>หน่วยงาน:</b> " . htmlspecialchars($p['department']) . "\n";
     $msg .= "<b>สถานที่:</b> อาคาร {$p['building']} ชั้น {$p['floor']} (" . ($p['service_point'] ?: '-') . ")\n";
     $msg .= "----------------------------------\n";

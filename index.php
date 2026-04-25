@@ -57,6 +57,9 @@ switch ($page) {
     case 'statistics':
         load_page('statistics', ['user' => $user]);
         break;
+    case 'work-categories':
+        load_page('work-categories', ['user' => $user]);
+        break;
     case 'logout':
         $_SESSION = [];
 

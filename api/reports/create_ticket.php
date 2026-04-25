@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
-date_default_timezone_set('Asia/Bangkok'); // เพิ่มบรรทัดนี้เพื่อล็อค Timezone เป็นเวลาประเทศไทย
+date_default_timezone_set('Asia/Bangkok');
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../db/conn.php';
@@ -21,7 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// --- 1. รับค่าและทำความสะอาดข้อมูล ---
 $params = [
     'request_type'    => trim((string)($_POST['request_type'] ?? '')),
     'category'        => trim((string)($_POST['issue_category'] ?? '')),

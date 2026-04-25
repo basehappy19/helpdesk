@@ -151,10 +151,13 @@ try {
 
     $pdo->commit();
 
-    // แจ้งเตือน Telegram
-    $baseUrl = $_ENV['APP_URL'] ?? 'http://127.0.0.1:8080';
-    $msg = formatTelegramMessage($ticketCode, $params, $reqType['name_th'], $categoryName, $symptomName, $baseUrl, $uploadedCount);
-    sendTelegramAlert($msg);
+    $isTelegramEnabled = filter_var($_ENV['TELEGRAM_ENABLED'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+    if ($isTelegramEnabled) {
+        $baseUrl = rtrim($_ENV['APP_URL'] ?? 'http://127.0.0.1:8080', '/');
+        $msg = formatTelegramMessage($ticketCode, $params, $reqType['name_th'], $categoryName, $symptomName, $baseUrl, $uploadedCount);
+        sendTelegramAlert($msg);
+    }
 
     echo json_encode([
         'ok' => true,

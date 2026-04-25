@@ -11,7 +11,6 @@ require_once __DIR__ . '/../controllers/ManageUsersController.php';
 $manageController = new ManageUsersController($pdo);
 $response = $manageController->handleRequest();
 
-// PRG Pattern - ป้องกันการส่ง Form ซ้ำ
 if ($response) {
     $_SESSION['toast_message'] = $response['message'];
     $_SESSION['toast_status'] = $response['status'];
@@ -19,7 +18,6 @@ if ($response) {
     exit();
 }
 
-// โหลดข้อความแจ้งเตือนจาก Session
 $flash_message = null;
 $flash_status = null;
 if (isset($_SESSION['toast_message'])) {
@@ -186,29 +184,12 @@ $all_users = $manageController->getAllUsers();
     </div>
 
     <script>
-        // ระบบ Toast
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'hot-toast';
-            let iconHtml = type === 'success' 
-                ? `<svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>`
-                : `<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>`;
-            
-            toast.innerHTML = `${iconHtml} <span>${message}</span>`;
-            container.appendChild(toast);
-            requestAnimationFrame(() => toast.classList.add('show'));
-            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
-        }
-
-        // โหลดข้อมูลแจ้งเตือน
         <?php if ($flash_message): ?>
             document.addEventListener('DOMContentLoaded', () => {
                 showToast("<?php echo addslashes($flash_message); ?>", "<?php echo $flash_status; ?>");
             });
         <?php endif; ?>
 
-        // การจัดการ Modal
         const modal = document.getElementById('userModal');
         const form = document.getElementById('userForm');
 

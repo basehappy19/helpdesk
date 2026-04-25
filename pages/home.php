@@ -222,7 +222,7 @@ $statistics = getStatusStatistics();
 
                                             <?php if (!empty($report['thumbnail'])): ?>
                                                 <div class="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-                                                    <img src="/<?= htmlspecialchars(ltrim($report['thumbnail'], '/')) ?>" class="w-full h-full object-cover" alt="รูปปัญหา">
+                                                    <img src="<?= htmlspecialchars($report['thumbnail']) ?>" class="w-full h-full object-cover" alt="รูปปัญหา">
                                                 </div>
                                             <?php else: ?>
                                                 <div class="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-200">

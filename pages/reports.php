@@ -45,6 +45,7 @@ $statusList = getStatuses();
 
 <body class="bg-gray-50">
     <?php include './components/navbar.php'; ?>
+    <div id="toast-container"></div>
 
     <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen pb-12">
         <div class="max-w-7xl mx-auto md:px-4 sm:px-6 lg:px-8 py-8">

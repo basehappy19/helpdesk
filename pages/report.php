@@ -5,13 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>แจ้งปัญหา / บริการ | HelpDesk</title>
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <?php include './lib/style.php'; ?>
 </head>
 
 <body>
     <?php include './components/navbar.php'; ?>
+    
     <div class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen py-8 md:px-4">
         <div class="max-w-7xl mx-auto">
             <div class="mb-6">

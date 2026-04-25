@@ -39,11 +39,6 @@ $all_users = $manageController->getAllUsers();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>จัดการผู้ใช้ระบบ | HelpDesk</title>
     <?php include './lib/style.php'; ?>
-    <style>
-        /* สไตล์ Toast เหมือนหน้า Profile */
-        .hot-toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-150%) scale(0.9); opacity: 0; background: white; color: #374151; padding: 12px 16px; border-radius: 9999px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; transition: all 0.35s cubic-bezier(0.21, 1.02, 0.73, 1); z-index: 9999; pointer-events: none; }
-        .hot-toast.show { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
-    </style>
 </head>
 <body class="bg-slate-50 font-sans antialiased text-gray-800">
     <?php include './components/navbar.php'; ?>

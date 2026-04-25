@@ -53,7 +53,9 @@ try {
     if (!$reqType) throw new RuntimeException('ไม่พบประเภทการแจ้งในระบบ');
 
     // จัดการหมวดหมู่ (Category)
-    $categoryId = null; $categoryRemark = null; $categoryName = '-';
+    $categoryId = null;
+    $categoryRemark = null;
+    $categoryName = '-';
     if ($params['category'] === '__other__') {
         $categoryRemark = $params['category_other'];
         $categoryName = $params['category_other'];
@@ -69,7 +71,9 @@ try {
     }
 
     // จัดการอาการ (Symptom)
-    $symptomId = null; $symptomRemark = null; $symptomName = '-';
+    $symptomId = null;
+    $symptomRemark = null;
+    $symptomName = '-';
     if ($params['symptom'] === '__other__') {
         $symptomRemark = $params['symptom_other'];
         $symptomName = $params['symptom_other'];
@@ -111,14 +115,18 @@ try {
     // --- อัปโหลดรูปภาพด้วยฟังก์ชันพื้นฐานของ PHP ---
     $uploadedCount = 0;
     if (isset($_FILES['images']) && is_array($_FILES['images']['name'])) {
-        $uploadDir = __DIR__ . '/../../uploads/tickets/' . $ticketCode . '/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
+        $uploadDirRelative = 'uploads/tickets/' . $ticketCode . '/';
+        $uploadDirFull = __DIR__ . '/../../' . $uploadDirRelative;
+
+        if (!is_dir($uploadDirFull)) {
+            mkdir($uploadDirFull, 0777, true);
         }
 
         $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
         $imageCount = count($_FILES['images']['name']);
         $maxImages = min($imageCount, 3);
+
+        $baseUrl = rtrim($_ENV['APP_URL'] ?? 'http://127.0.0.1:8080', '/');
 
         for ($i = 0; $i < $maxImages; $i++) {
             if ($_FILES['images']['error'][$i] === UPLOAD_ERR_OK) {
@@ -128,15 +136,13 @@ try {
 
                 if (in_array($ext, $allowedExt)) {
                     $newFileName = uniqid('img_') . '.' . $ext;
-                    $destPath = $uploadDir . $newFileName;
-                    
-                    // Path สำหรับเก็บลง DB
-                    $dbPath = 'uploads/tickets/' . $ticketCode . '/' . $newFileName;
+                    $destPath = $uploadDirFull . $newFileName;
 
-                    // ใช้ move_uploaded_file อัปโหลดไฟล์ตรงๆ ไม่พึ่ง Lib จัดการรูปภาพ
+                    $fullUrlPath = $baseUrl . '/' . $uploadDirRelative . $newFileName;
+
                     if (move_uploaded_file($tmpName, $destPath)) {
                         $stmtImg = $pdo->prepare("INSERT INTO ticket_images (ticket_id, file_path) VALUES (?, ?)");
-                        $stmtImg->execute([$ticketId, $dbPath]);
+                        $stmtImg->execute([$ticketId, $fullUrlPath]);
                         $uploadedCount++;
                     }
                 }
@@ -156,7 +162,6 @@ try {
         'message' => 'Ticket created',
         'ticket_code' => $ticketCode
     ]);
-
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     error_log("Ticket Error: " . $e->getMessage());
@@ -165,7 +170,8 @@ try {
 }
 
 /** * --- Helper Functions --- */
-function validateInput(array $p): array {
+function validateInput(array $p): array
+{
     $e = [];
     if (!$p['request_type']) $e[] = 'กรุณาระบุประเภทการแจ้ง';
     if (!$p['category'] && !$p['category_other']) $e[] = 'กรุณาระบุหมวดหมู่ปัญหา';
@@ -175,27 +181,38 @@ function validateInput(array $p): array {
     return $e;
 }
 
-function getInfoByCode(PDO $pdo, string $table, string $code): ?array {
+function getInfoByCode(PDO $pdo, string $table, string $code): ?array
+{
     $stmt = $pdo->prepare("SELECT id, name_th FROM {$table} WHERE code = ? LIMIT 1");
     $stmt->execute([$code]);
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
-function insertTicketWithCode(PDO $pdo, array $data, int $maxRetry = 5): array {
+function insertTicketWithCode(PDO $pdo, array $data, int $maxRetry = 5): array
+{
     $sql = "INSERT INTO tickets (
                 code, request_type_id, category_id, category_other_remark, 
                 symptom_id, symptom_other_remark, department, building, 
                 floor, service_point, phone_ext, reporter_name
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    
+
     for ($i = 0; $i < $maxRetry; $i++) {
         $code = generateTicketCode();
         try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $code, $data['request_type_id'], $data['issue_category_id'], $data['category_other_remark'],
-                $data['issue_symptom_id'], $data['symptom_other_remark'], $data['department'], $data['building'], 
-                $data['floor'], $data['service_point'], $data['phone'], $data['reporter']
+                $code,
+                $data['request_type_id'],
+                $data['issue_category_id'],
+                $data['category_other_remark'],
+                $data['issue_symptom_id'],
+                $data['symptom_other_remark'],
+                $data['department'],
+                $data['building'],
+                $data['floor'],
+                $data['service_point'],
+                $data['phone'],
+                $data['reporter']
             ]);
             return ['ok' => true, 'code' => $code, 'id' => (int)$pdo->lastInsertId()];
         } catch (PDOException $e) {
@@ -206,15 +223,16 @@ function insertTicketWithCode(PDO $pdo, array $data, int $maxRetry = 5): array {
     return ['ok' => false, 'error' => 'ไม่สามารถสร้างรหัส Ticket ได้'];
 }
 
-function formatTelegramMessage($code, $p, $reqType, $cat, $sym, $url, $imgCount): string {
+function formatTelegramMessage($code, $p, $reqType, $cat, $sym, $url, $imgCount): string
+{
     $buddhistYear = (int)date('Y') + 543;
     $dateTime = date('d/m/') . $buddhistYear . date(' H:i');
 
     $msg = "<b>🛠 มีรายการแจ้งปัญหาใหม่!</b>\n";
     $msg .= "----------------------------------\n";
     $msg .= "<b>รหัส:</b> <code>{$code}</code>\n";
-    $msg .= "<b>เวลาแจ้ง:</b> {$dateTime} น.\n"; 
-    
+    $msg .= "<b>เวลาแจ้ง:</b> {$dateTime} น.\n";
+
     $phoneText = !empty($p['phone']) ? " (โทร: {$p['phone']})" : "";
     $msg .= "<b>ผู้แจ้ง:</b> " . htmlspecialchars($p['reporter']) . $phoneText . "\n";
     $msg .= "<b>หน่วยงาน:</b> " . htmlspecialchars($p['department']) . "\n";
@@ -231,10 +249,11 @@ function formatTelegramMessage($code, $p, $reqType, $cat, $sym, $url, $imgCount)
     return $msg;
 }
 
-function sendTelegramAlert(string $message): void {
+function sendTelegramAlert(string $message): void
+{
     $token = $_ENV['TELEGRAM_BOT_TOKEN'] ?? '';
     $chatId = $_ENV['TELEGRAM_CHAT_ID'] ?? '';
-    
+
     if (!$token || !$chatId) return;
 
     $url = "https://api.telegram.org/bot{$token}/sendMessage";
@@ -246,12 +265,13 @@ function sendTelegramAlert(string $message): void {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10); 
-    
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
     curl_exec($ch);
     curl_close($ch);
 }
 
-function generateTicketCode(): string {
+function generateTicketCode(): string
+{
     return strtoupper("H" . base_convert((string)time(), 10, 36) . "-" . base_convert((string)random_int(100, 1295), 10, 36));
 }

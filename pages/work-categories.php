@@ -8,10 +8,12 @@ if (!isset($user['id']) || $user['role'] !== 'SYSTEM') {
 global $pdo;
 require_once __DIR__ . '/../controllers/WorkCategoriesController.php';
 
+$currentPage = isset($_GET['p']) ? max(1, intval($_GET['p'])) : 1;
+$limit = 100;
+
 $manageController = new WorkCategoriesController($pdo);
 $response = $manageController->handleRequest();
 
-// PRG Pattern - ป้องกันการส่ง Form ซ้ำ
 if ($response) {
     $_SESSION['toast_message'] = $response['message'];
     $_SESSION['toast_status'] = $response['status'];
@@ -19,7 +21,6 @@ if ($response) {
     exit();
 }
 
-// โหลดข้อความแจ้งเตือนจาก Session
 $flash_message = null;
 $flash_status = null;
 if (isset($_SESSION['toast_message'])) {
@@ -29,7 +30,9 @@ if (isset($_SESSION['toast_message'])) {
     unset($_SESSION['toast_status']);
 }
 
-$categories = $manageController->getAllCategories();
+$result = $manageController->getAllCategories($currentPage, $limit);
+$categories = $result['categories'];
+$totalPages = $result['total_pages'];
 ?>
 
 <!DOCTYPE html>
@@ -155,7 +158,57 @@ $categories = $manageController->getAllCategories();
                             <?php endif; ?>
                         </tbody>
                     </table>
+
                 </div>
+                <?php if ($totalPages > 1): ?>
+                    <div class="px-6 py-4 bg-white border-t border-slate-100 flex items-center justify-between">
+                        <div class="hidden sm:block">
+                            <p class="text-sm text-slate-500">
+                                แสดงหน้า <span class="font-semibold text-slate-900"><?php echo $currentPage; ?></span> จากทั้งหมด <span class="font-semibold text-slate-900"><?php echo $totalPages; ?></span> หน้า
+                            </p>
+                        </div>
+
+                        <nav class="flex items-center gap-1" aria-label="Pagination">
+                            <a href="?page=work-categories&p=<?php echo max(1, $currentPage - 1); ?>"
+                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-all <?php echo ($currentPage <= 1) ? 'opacity-40 pointer-events-none' : ''; ?>">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </a>
+
+                            <div class="flex items-center gap-1 mx-1">
+                                <?php
+                                $window = 2;
+                                $start = max(1, $currentPage - $window);
+                                $end = min($totalPages, $currentPage + $window);
+
+                                if ($start > 1): ?>
+                                    <a href="?page=work-categories&p=1" class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">1</a>
+                                    <?php if ($start > 2): ?><span class="text-slate-300">...</span><?php endif; ?>
+                                <?php endif;
+
+                                for ($i = $start; $i <= $end; $i++): ?>
+                                    <a href="?page=work-categories&p=<?php echo $i; ?>"
+                                        class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-bold transition-all <?php echo ($i == $currentPage) ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'; ?>">
+                                        <?php echo $i; ?>
+                                    </a>
+                                <?php endfor;
+
+                                if ($end < $totalPages): ?>
+                                    <?php if ($end < $totalPages - 1): ?><span class="text-slate-300">...</span><?php endif; ?>
+                                    <a href="?page=work-categories&p=<?php echo $totalPages; ?>" class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><?php echo $totalPages; ?></a>
+                                <?php endif; ?>
+                            </div>
+
+                            <a href="?page=work-categories&p=<?php echo min($totalPages, $currentPage + 1); ?>"
+                                class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-all <?php echo ($currentPage >= $totalPages) ? 'opacity-40 pointer-events-none' : ''; ?>">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        </nav>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>

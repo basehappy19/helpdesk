@@ -7,10 +7,24 @@ class ManageUsersController {
     }
 
     // 1. ดึงผู้ใช้ทั้งหมดมาแสดงในตาราง
-    public function getAllUsers() {
-        $stmt = $this->pdo->prepare("SELECT id, username, display_th, phone_ext, role, created_at FROM users ORDER BY created_at DESC");
+    public function getAllUsers($page = 1, $limit = 10) {
+        $offset = ($page - 1) * $limit;
+        
+        $stmt = $this->pdo->prepare("SELECT id, username, display_th, phone_ext, role, created_at FROM users ORDER BY created_at DESC LIMIT :limit OFFSET :offset");
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $total = $this->pdo->query("SELECT COUNT(id) FROM users")->fetchColumn();
+        $totalPages = ceil($total / $limit);
+
+        return [
+            'users' => $users,
+            'total_pages' => $totalPages,
+            'current_page' => $page,
+            'total_records' => $total
+        ];
     }
 
     // 2. จัดการข้อมูลจากฟอร์ม (POST Request)

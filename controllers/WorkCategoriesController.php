@@ -19,7 +19,9 @@ class WorkCategoriesController {
         return null;
     }
 
-    public function getAllCategories() {
+    public function getAllCategories($page = 1, $limit = 10) {
+        $offset = ($page - 1) * $limit;
+
         $sql = "
             SELECT 
                 c.id, 
@@ -30,9 +32,25 @@ class WorkCategoriesController {
             LEFT JOIN daily_work_logs w ON c.id = w.category_id
             GROUP BY c.id
             ORDER BY c.id DESC
+            LIMIT :limit OFFSET :offset
         ";
-        $stmt = $this->pdo->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // นับจำนวนทั้งหมด
+        $total = $this->pdo->query("SELECT COUNT(id) FROM work_log_categories")->fetchColumn();
+        $totalPages = ceil($total / $limit);
+
+        return [
+            'categories' => $categories,
+            'total_pages' => $totalPages,
+            'current_page' => $page,
+            'total_records' => $total
+        ];
     }
 
     private function saveCategory() {

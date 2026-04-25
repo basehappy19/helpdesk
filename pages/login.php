@@ -1,7 +1,11 @@
 <?php
 require_once __DIR__ . "../../functions/users.php";
 
-// 1. ประกาศตัวแปร $error ไว้ก่อนเพื่อกัน Warning ว่า undefined variable
+if(isset($_SESSION['user'])) {
+    header("Location: ./?page=home");
+    exit();
+}
+
 $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === "POST") {

@@ -1,5 +1,5 @@
-@import url("./tailwind.css");
-@import url("./font.css");
+@import url("./tailwind.css?v=20260426");
+@import url("./font.css?v=20260426");
 
 body {
     background-color: #f8f9fa;

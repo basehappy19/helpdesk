@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="/style/global.css">
+<link rel="stylesheet" href="/style/global.css?v=<?php echo time(); ?>">
 
 <link rel="icon" href="/style/favicon/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/style/favicon/favicon-32x32.png">

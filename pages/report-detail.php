@@ -211,6 +211,34 @@ if ($reportDetails === null) {
                                 </p>
                                 <p class="text-base text-red-900 font-medium"><?= htmlspecialchars($reportDetails['display_symptom'] ?? '-') ?></p>
                             </div>
+
+                            <?php if (!empty($reportDetails['images'])): ?>
+                            <div class="mt-6 border-t border-gray-100 pt-5">
+                                <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                    <svg class="w-4 h-4 mr-1.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    รูปภาพประกอบ (<?= count($reportDetails['images']) ?> รูป)
+                                </h3>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    <?php foreach ($reportDetails['images'] as $img): 
+                                        $imgPath = '/' . htmlspecialchars(ltrim($img['file_path'], '/'));
+                                    ?>
+                                        <button type="button" onclick="openImageModal('<?= $imgPath ?>')" class="block group overflow-hidden rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all relative w-full focus:outline-none">
+                                            <div class="aspect-square w-full">
+                                                <img src="<?= $imgPath ?>" alt="รูปภาพประกอบ" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300">
+                                            </div>
+                                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center">
+                                                <svg class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                                                </svg>
+                                            </div>
+                                        </button>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
                         </div>
                     </div>
 
@@ -441,6 +469,47 @@ if ($reportDetails === null) {
         </div>
     </div>
 
+    <div id="imageModal" class="fixed inset-0 backdrop-blur-md bg-black/80 hidden items-center justify-center z-[20000] p-4 opacity-0 transition-opacity duration-300" onclick="closeImageModal()">
+        <button type="button" class="absolute top-6 right-6 text-white/80 hover:text-white bg-black/50 hover:bg-black/80 rounded-full p-2 transition-all focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+        <img id="modalImage" src="" alt="ภาพขนาดเต็ม" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl transform scale-95 transition-transform duration-300" onclick="event.stopPropagation()">
+    </div>
+
+    <script>
+        // ฟังก์ชันสำหรับเปิด-ปิดรูปภาพ Modal (ให้ทำงานได้แม้ไม่ใช่ Admin)
+        function openImageModal(url) {
+            const modal = document.getElementById('imageModal');
+            const img = document.getElementById('modalImage');
+            img.src = url;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // รอจังหวะนิดนึงเพื่อให้ CSS Transition ทำงาน
+            requestAnimationFrame(() => {
+                modal.classList.remove('opacity-0');
+                img.classList.remove('scale-95');
+                img.classList.add('scale-100');
+            });
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            const img = document.getElementById('modalImage');
+            modal.classList.add('opacity-0');
+            img.classList.remove('scale-100');
+            img.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                img.src = '';
+            }, 300); // 300ms ตรงกับ duration-300 ในคลาส
+        }
+    </script>
+
     <?php if ($canEditStatus): ?>
 
         <div id="addStatusModal" class="fixed inset-0 backdrop-blur-sm bg-slate-900/60 hidden items-center justify-center z-[10000] p-4">
@@ -595,13 +664,13 @@ if ($reportDetails === null) {
             const logCount = <?= count($reportDetails['ticket_status_logs'] ?? []) ?>;
             const initialSymptom = <?= json_encode($reportDetails['display_symptom'] ?? '') ?>;
             const latestLogSymptom = <?= json_encode($reportDetails['ticket_status_logs'][0]['symptom'] ?? '') ?>;
-            
+
             const defaultSymptom = latestLogSymptom ? latestLogSymptom : initialSymptom;
 
             function openAddStatusModal() {
                 document.getElementById('addStatusModal').classList.remove('hidden');
                 document.getElementById('addStatusModal').classList.add('flex');
-                
+
                 // เซ็ตเวลาปัจจุบัน
                 const now = new Date();
                 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -610,13 +679,13 @@ if ($reportDetails === null) {
                 if (logCount === 0 || logCount === 1) {
                     const statusSelect = document.querySelector('#addStatusForm select[name="to_status_id"]');
                     const symptomInput = document.getElementById('symptom_input_add');
-                    
+
                     if (statusSelect && statusSelect.value === "") {
-                        statusSelect.value = "2"; 
+                        statusSelect.value = "2";
                     }
-                    
+
                     if (symptomInput && symptomInput.value === "") {
-                        symptomInput.value = defaultSymptom; 
+                        symptomInput.value = defaultSymptom;
                     }
                 }
             }
@@ -632,7 +701,7 @@ if ($reportDetails === null) {
             function openEditStatusModal(log) {
                 document.getElementById('editStatusModal').classList.remove('hidden');
                 document.getElementById('editStatusModal').classList.add('flex');
-                
+
                 document.getElementById('edit_log_id').value = log.id;
                 document.getElementById('symptom_input').value = log.symptom ?? "";
                 document.getElementById('cause_input').value = log.cause ?? "";

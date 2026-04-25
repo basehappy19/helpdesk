@@ -3,3 +3,4 @@
 /lib/generated/prisma
 /.env
 /debug.log
+/uploads/

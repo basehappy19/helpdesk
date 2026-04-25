@@ -219,6 +219,19 @@ $statistics = getStatusStatistics();
                                 <?php else: ?>
                                     <?php foreach (array_slice($reports, 0, 3) as $report) : ?>
                                         <div class="group flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-gray-100 transition-colors">
+
+                                            <?php if (!empty($report['thumbnail'])): ?>
+                                                <div class="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                                                    <img src="/<?= htmlspecialchars(ltrim($report['thumbnail'], '/')) ?>" class="w-full h-full object-cover" alt="รูปปัญหา">
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-200">
+                                                    <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                    </svg>
+                                                </div>
+                                            <?php endif; ?>
+
                                             <div class="flex-1 min-w-0">
                                                 <div class="flex items-center gap-2 mb-1">
                                                     <span class="text-xs font-mono font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded"><?php echo $report['code'] ?></span>
@@ -232,7 +245,8 @@ $statistics = getStatusStatistics();
                                                 <h3 class="text-sm font-semibold text-gray-800 truncate"><?php echo htmlspecialchars($report['display_symptom'] ?? '-') ?></h3>
                                                 <p class="text-xs text-gray-500 mt-1 truncate"><?php echo htmlspecialchars($report['reporter_name']) ?> • <?php echo diffLargestThai($report['created_at']) ?></p>
                                             </div>
-                                            <a target="_blank" href="./?page=report-detail&id=<?php echo $report['id'] ?>" class="text-gray-300 hover:text-indigo-600 transition-colors p-2">
+
+                                            <a target="_blank" href="./?page=report-detail&code=<?php echo $report['code'] ?>" class="text-gray-300 hover:text-indigo-600 transition-colors p-2 mt-1">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                                 </svg>

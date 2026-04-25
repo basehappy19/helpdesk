@@ -63,9 +63,10 @@ function getRecentReports(int $limit = 3): array {
                 'department'         => $row['department'],
                 'reporter_name'      => $row['reporter_name'],
                 'request_type_name'  => $row['request_type_name'],
-                'display_category'   => $catName ?: '-', // ฟิลด์ที่จัด Format แล้ว
-                'display_symptom'    => $symName ?: '-', // ฟิลด์ที่จัด Format แล้ว
+                'display_category'   => $catName ?: '-',
+                'display_symptom'    => $symName ?: '-',
                 'ticket_status_logs' => [],
+                'thumbnail'          => null // เตรียมตัวแปรเก็บรูปย่อ
             ];
         }
 
@@ -85,7 +86,33 @@ function getRecentReports(int $limit = 3): array {
         }
     }
 
-    return array_values($byId);
+    $results = array_values($byId);
+
+    // ดึงรูปภาพภาพแรกของแต่ละ Ticket มาเป็น Thumbnail
+    if (!empty($results)) {
+        $ticketIds = array_column($results, 'id');
+        $inQuery = implode(',', array_fill(0, count($ticketIds), '?'));
+        
+        $imgSql = "SELECT ticket_id, file_path FROM ticket_images WHERE ticket_id IN ($inQuery) ORDER BY id ASC";
+        $imgStmt = $pdo->prepare($imgSql);
+        $imgStmt->execute($ticketIds);
+        $images = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $thumbnails = [];
+        foreach ($images as $img) {
+            // เก็บเฉพาะรูปแรกสุดที่เจอของแต่ละ ticket
+            if (!isset($thumbnails[$img['ticket_id']])) {
+                $thumbnails[$img['ticket_id']] = $img['file_path'];
+            }
+        }
+
+        foreach ($results as &$res) {
+            $res['thumbnail'] = $thumbnails[$res['id']] ?? null;
+        }
+        unset($res); // ยกเลิก reference
+    }
+
+    return $results;
 }
 
 /**
@@ -353,6 +380,7 @@ function getReportDetails(string $code): ?array {
         'display_category'   => $catName ?: '-',    // เพิ่มฟิลด์ใหม่สำหรับแสดงผล
         'display_symptom'    => $symName ?: '-',    // เพิ่มฟิลด์ใหม่สำหรับแสดงผล
         'ticket_status_logs' => [],
+        'images'             => [],                 // เตรียม Array ว่างไว้สำหรับเก็บรูปภาพ
     ];
 
     foreach ($rows as $row) {
@@ -370,6 +398,12 @@ function getReportDetails(string $code): ?array {
             ];
         }
     }
+
+    // --- เพิ่มส่วนดึงข้อมูลรูปภาพจากตาราง ticket_images ---
+    $sqlImg = "SELECT id, file_path FROM ticket_images WHERE ticket_id = :ticket_id ORDER BY id ASC";
+    $stmtImg = $pdo->prepare($sqlImg);
+    $stmtImg->execute(['ticket_id' => $work['id']]);
+    $work['images'] = $stmtImg->fetchAll(PDO::FETCH_ASSOC);
 
     return $work;
 }

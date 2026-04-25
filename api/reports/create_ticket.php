@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
+date_default_timezone_set('Asia/Bangkok'); // เพิ่มบรรทัดนี้เพื่อล็อค Timezone เป็นเวลาประเทศไทย
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../db/conn.php';
@@ -14,14 +15,13 @@ try {
     error_log("Dotenv Error: " . $e->getMessage());
 }
 
-// ตรวจสอบ Method
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['ok' => false, 'message' => 'Method Not Allowed']);
     exit;
 }
 
-// --- 1. รับค่าและทำความสะอาดข้อมูล (Input Handling) ---
+// --- 1. รับค่าและทำความสะอาดข้อมูล ---
 $params = [
     'request_type'    => trim((string)($_POST['request_type'] ?? '')),
     'category'        => trim((string)($_POST['issue_category'] ?? '')),
@@ -36,11 +36,9 @@ $params = [
     'reporter'        => trim((string)($_POST['reporter'] ?? '')),
 ];
 
-// Normalize 'other' values
 if ($params['category'] === '' && $params['category_other'] !== '') $params['category'] = '__other__';
 if ($params['symptom'] === '' && $params['symptom_other'] !== '')   $params['symptom']  = '__other__';
 
-// --- 2. Validation ---
 $errors = validateInput($params);
 if ($errors) {
     http_response_code(422);
@@ -48,41 +46,30 @@ if ($errors) {
     exit;
 }
 
-// --- 3. Main Logic (Database Transaction) ---
 $pdo->beginTransaction();
 
 try {
-    // ดึงข้อมูลประเภทงาน (Request Type)
     $reqType = getInfoByCode($pdo, 'request_types', $params['request_type']);
     if (!$reqType) throw new RuntimeException('ไม่พบประเภทการแจ้งในระบบ');
 
-    // จัดการหมวดหมู่ (Category) แบบ Hybrid
-    $categoryId = null;
-    $categoryRemark = null;
-    $categoryName = '-';
-
+    // จัดการหมวดหมู่ (Category)
+    $categoryId = null; $categoryRemark = null; $categoryName = '-';
     if ($params['category'] === '__other__') {
-        // กรณีไม่มี Code ส่งมา แต่พิมพ์ค่าอื่นๆ มา
         $categoryRemark = $params['category_other'];
         $categoryName = $params['category_other'];
     } else {
-        // กรณีส่ง Code มา (อาจเป็น Code หมวดปกติ หรือ Code ของหมวด "อื่นๆ")
         $cat = getInfoByCode($pdo, 'issue_categories', $params['category']);
         if (!$cat) throw new RuntimeException('ไม่พบหมวดหมู่ปัญหาในระบบ');
         $categoryId = (int)$cat['id'];
         $categoryName = $cat['name_th'];
-        
         if ($params['category_other'] !== '') {
             $categoryRemark = $params['category_other'];
             $categoryName .= " (" . $params['category_other'] . ")";
         }
     }
 
-    // จัดการอาการ (Symptom) แบบ Hybrid
-    $symptomId = null;
-    $symptomRemark = null;
-    $symptomName = '-';
-
+    // จัดการอาการ (Symptom)
+    $symptomId = null; $symptomRemark = null; $symptomName = '-';
     if ($params['symptom'] === '__other__') {
         $symptomRemark = $params['symptom_other'];
         $symptomName = $params['symptom_other'];
@@ -91,14 +78,13 @@ try {
         if (!$sym) throw new RuntimeException('ไม่พบอาการที่ระบุในระบบ');
         $symptomId = (int)$sym['id'];
         $symptomName = $sym['name_th'];
-
         if ($params['symptom_other'] !== '') {
             $symptomRemark = $params['symptom_other'];
             $symptomName .= " (" . $params['symptom_other'] . ")";
         }
     }
 
-    // บันทึก Ticket
+    // บันทึก Ticket หลัก
     $ticketPayload = [
         'request_type_id'       => $reqType['id'],
         'issue_category_id'     => $categoryId,
@@ -115,22 +101,60 @@ try {
 
     $result = insertTicketWithCode($pdo, $ticketPayload);
     if (!$result['ok']) throw new RuntimeException($result['error']);
+    $ticketId = $result['id'];
+    $ticketCode = $result['code'];
 
-    // บันทึก Log สถานะ (รอดำเนินการ = 1)
+    // บันทึก Log
     $logStmt = $pdo->prepare("INSERT INTO ticket_status_logs (ticket_id, from_status, to_status, symptom) VALUES (?, NULL, 1, ?)");
-    $logStmt->execute([$result['id'], $symptomName]);
+    $logStmt->execute([$ticketId, $symptomName]);
+
+    // --- อัปโหลดรูปภาพด้วยฟังก์ชันพื้นฐานของ PHP ---
+    $uploadedCount = 0;
+    if (isset($_FILES['images']) && is_array($_FILES['images']['name'])) {
+        $uploadDir = __DIR__ . '/../../uploads/tickets/' . $ticketCode . '/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
+        $imageCount = count($_FILES['images']['name']);
+        $maxImages = min($imageCount, 3);
+
+        for ($i = 0; $i < $maxImages; $i++) {
+            if ($_FILES['images']['error'][$i] === UPLOAD_ERR_OK) {
+                $tmpName = $_FILES['images']['tmp_name'][$i];
+                $originalName = $_FILES['images']['name'][$i];
+                $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+                if (in_array($ext, $allowedExt)) {
+                    $newFileName = uniqid('img_') . '.' . $ext;
+                    $destPath = $uploadDir . $newFileName;
+                    
+                    // Path สำหรับเก็บลง DB
+                    $dbPath = 'uploads/tickets/' . $ticketCode . '/' . $newFileName;
+
+                    // ใช้ move_uploaded_file อัปโหลดไฟล์ตรงๆ ไม่พึ่ง Lib จัดการรูปภาพ
+                    if (move_uploaded_file($tmpName, $destPath)) {
+                        $stmtImg = $pdo->prepare("INSERT INTO ticket_images (ticket_id, file_path) VALUES (?, ?)");
+                        $stmtImg->execute([$ticketId, $dbPath]);
+                        $uploadedCount++;
+                    }
+                }
+            }
+        }
+    }
 
     $pdo->commit();
 
-    // --- 4. การแจ้งเตือน (Telegram Notification) ---
+    // แจ้งเตือน Telegram
     $baseUrl = $_ENV['APP_URL'] ?? 'http://127.0.0.1:8080';
-    $msg = formatTelegramMessage($result['code'], $params, $reqType['name_th'], $categoryName, $symptomName, $baseUrl);
+    $msg = formatTelegramMessage($ticketCode, $params, $reqType['name_th'], $categoryName, $symptomName, $baseUrl, $uploadedCount);
     sendTelegramAlert($msg);
 
     echo json_encode([
         'ok' => true,
         'message' => 'Ticket created',
-        'ticket_code' => $result['code']
+        'ticket_code' => $ticketCode
     ]);
 
 } catch (Throwable $e) {
@@ -140,9 +164,7 @@ try {
     echo json_encode(['ok' => false, 'message' => 'เกิดข้อผิดพลาดในระบบ', 'error' => $e->getMessage()]);
 }
 
-/** * --- Helper Functions ---
- */
-
+/** * --- Helper Functions --- */
 function validateInput(array $p): array {
     $e = [];
     if (!$p['request_type']) $e[] = 'กรุณาระบุประเภทการแจ้ง';
@@ -171,18 +193,9 @@ function insertTicketWithCode(PDO $pdo, array $data, int $maxRetry = 5): array {
         try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $code, 
-                $data['request_type_id'], 
-                $data['issue_category_id'], 
-                $data['category_other_remark'],
-                $data['issue_symptom_id'], 
-                $data['symptom_other_remark'],
-                $data['department'], 
-                $data['building'], 
-                $data['floor'], 
-                $data['service_point'], 
-                $data['phone'], 
-                $data['reporter']
+                $code, $data['request_type_id'], $data['issue_category_id'], $data['category_other_remark'],
+                $data['issue_symptom_id'], $data['symptom_other_remark'], $data['department'], $data['building'], 
+                $data['floor'], $data['service_point'], $data['phone'], $data['reporter']
             ]);
             return ['ok' => true, 'code' => $code, 'id' => (int)$pdo->lastInsertId()];
         } catch (PDOException $e) {
@@ -193,7 +206,7 @@ function insertTicketWithCode(PDO $pdo, array $data, int $maxRetry = 5): array {
     return ['ok' => false, 'error' => 'ไม่สามารถสร้างรหัส Ticket ได้'];
 }
 
-function formatTelegramMessage($code, $p, $reqType, $cat, $sym, $url): string {
+function formatTelegramMessage($code, $p, $reqType, $cat, $sym, $url, $imgCount): string {
     $buddhistYear = (int)date('Y') + 543;
     $dateTime = date('d/m/') . $buddhistYear . date(' H:i');
 
@@ -204,13 +217,15 @@ function formatTelegramMessage($code, $p, $reqType, $cat, $sym, $url): string {
     
     $phoneText = !empty($p['phone']) ? " (โทร: {$p['phone']})" : "";
     $msg .= "<b>ผู้แจ้ง:</b> " . htmlspecialchars($p['reporter']) . $phoneText . "\n";
-    
     $msg .= "<b>หน่วยงาน:</b> " . htmlspecialchars($p['department']) . "\n";
     $msg .= "<b>สถานที่:</b> อาคาร {$p['building']} ชั้น {$p['floor']} (" . ($p['service_point'] ?: '-') . ")\n";
     $msg .= "----------------------------------\n";
     $msg .= "<b>ประเภทงาน:</b> {$reqType}\n";
     $msg .= "<b>ปัญหา:</b> " . htmlspecialchars($cat) . "\n";
     $msg .= "<b>อาการ:</b> " . htmlspecialchars($sym) . "\n";
+    if ($imgCount > 0) {
+        $msg .= "<b>แนบรูปภาพ:</b> 🖼 จำนวน {$imgCount} รูป\n";
+    }
     $msg .= "----------------------------------\n";
     $msg .= "🔗 <a href='{$url}/?page=report-detail&code={$code}'>ดูรายละเอียดรายงาน</a>";
     return $msg;
@@ -220,11 +235,7 @@ function sendTelegramAlert(string $message): void {
     $token = $_ENV['TELEGRAM_BOT_TOKEN'] ?? '';
     $chatId = $_ENV['TELEGRAM_CHAT_ID'] ?? '';
     
-    // ตรวจสอบว่าโหลดตัวแปร .env มาได้หรือไม่
-    if (!$token || !$chatId) {
-        error_log("Telegram Alert Skipped: Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in .env file");
-        return;
-    }
+    if (!$token || !$chatId) return;
 
     $url = "https://api.telegram.org/bot{$token}/sendMessage";
     $payload = json_encode(['chat_id' => $chatId, 'text' => $message, 'parse_mode' => 'HTML']);
@@ -235,19 +246,10 @@ function sendTelegramAlert(string $message): void {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10); // ป้องกัน cURL ค้าง
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10); 
     
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
+    curl_exec($ch);
     curl_close($ch);
-
-    // เช็คผลลัพธ์และเขียนลง Log ถ้าเกิดข้อผิดพลาด
-    if ($response === false) {
-        error_log("Telegram cURL Error: " . $curlError);
-    } elseif ($httpCode >= 400) {
-        error_log("Telegram API Error (HTTP {$httpCode}): " . $response);
-    }
 }
 
 function generateTicketCode(): string {

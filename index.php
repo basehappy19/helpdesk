@@ -1,8 +1,7 @@
 <?php
 session_start();
 ob_start();
-ini_set('log_errors', 'On');
-ini_set('error_log', __DIR__ . '/../debug.log');
+
 require_once __DIR__ . '/db/conn.php';
 require_once __DIR__ . '/functions/formatDate.php';
 require_once __DIR__ . '/functions/users.php';

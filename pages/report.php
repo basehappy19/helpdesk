@@ -23,7 +23,6 @@
                 </a>
             </div>
 
-            <!-- Header Card -->
             <div class="bg-white md:rounded-2xl shadow-sm border border-gray-100 p-8 mb-6 card-hover">
                 <div class="flex items-center gap-4">
                     <div class="bg-blue-600 rounded-xl p-3">
@@ -38,11 +37,9 @@
                 </div>
             </div>
 
-            <!-- Form Card -->
             <div class="bg-white md:rounded-2xl shadow-sm border border-gray-100 p-8 card-hover">
-                <form class="space-y-8" method="POST" action="/api/reports/create_ticket.php" novalidate>
+                <form class="space-y-8" method="POST" action="/api/reports/create_ticket.php" enctype="multipart/form-data" novalidate>
 
-                    <!-- Section 1: ข้อมูลปัญหา -->
                     <div class="space-y-6">
                         <div class="flex items-center gap-3 pb-4 border-b border-gray-200">
                             <div class="bg-blue-100 rounded-lg p-2">
@@ -54,7 +51,6 @@
                         </div>
 
                         <div class="grid md:grid-cols-2 gap-6">
-                            <!-- ปัญหาการใช้งาน -->
                             <div class="space-y-2">
                                 <label class="flex items-center text-sm font-medium text-gray-700">
                                     <span>ปัญหาการใช้งาน</span>
@@ -70,7 +66,6 @@
                                 </select>
                             </div>
 
-                            <!-- ประเภท -->
                             <div id="categoryGroup" class="space-y-2 hidden">
                                 <label class="flex items-center text-sm font-medium text-gray-700">
                                     <span>ประเภท</span>
@@ -91,7 +86,6 @@
                             </div>
                         </div>
 
-                        <!-- อาการปัญหา -->
                         <div id="symptomGroup" class="space-y-2 hidden">
                             <label class="flex items-center text-sm font-medium text-gray-700">
                                 <span>อาการปัญหา</span>
@@ -113,7 +107,6 @@
                         </div>
                     </div>
 
-                    <!-- Section 2: สถานที่ -->
                     <div class="space-y-6">
                         <div class="flex items-center gap-3 pb-4 border-b border-gray-200">
                             <div class="bg-green-100 rounded-lg p-2">
@@ -164,7 +157,33 @@
                         </div>
                     </div>
 
-                    <!-- Section 3: ผู้แจ้ง -->
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-3 pb-4 border-b border-gray-200">
+                            <div class="bg-orange-100 rounded-lg p-2">
+                                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <h2 class="text-xl font-semibold text-gray-800">รูปภาพประกอบ (สูงสุด 3 รูป)</h2>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 hover:border-blue-400 transition-all cursor-pointer">
+                                <input type="file" id="imageInput" accept=".jpg, .jpeg, .png, .webp, image/jpeg, image/png, image/webp" capture="environment" multiple class="hidden">
+                                <div class="flex flex-col items-center pointer-events-none">
+                                    <svg class="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    <p class="text-base text-gray-600 font-medium">กดที่นี่เพื่อถ่ายรูป หรืออัปโหลดไฟล์</p>
+                                    <p class="text-sm text-gray-500 mt-1">รองรับไฟล์ JPG, PNG, WEBP ไม่เกิน 3 รูป</p>
+                                </div>
+                            </div>
+
+                            <div id="previewContainer" class="grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
+                        </div>
+                    </div>
+
                     <div class="space-y-6">
                         <div class="flex items-center gap-3 pb-4 border-b border-gray-200">
                             <div class="bg-purple-100 rounded-lg p-2">
@@ -195,9 +214,8 @@
                         </div>
                     </div>
 
-                    <!-- Buttons -->
                     <div class="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-200">
-                        <button type="reset"
+                        <button type="reset" id="resetBtn"
                             class="cursor-pointer px-6 py-3 border-2 border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -215,7 +233,6 @@
                 </form>
             </div>
 
-            <!-- Footer -->
             <div class="text-center mt-6 text-gray-500 text-sm">
                 <p>หากมีปัญหาการใช้งาน กรุณาติดต่อผู้ดูแลระบบ</p>
             </div>
@@ -261,16 +278,111 @@
                 loading(msg = "กำลังส่งคำขอ…") {
                     return this.base({
                         text: "⏳ " + msg,
-                        duration: -1, // ค้างไว้ จนกว่าเราจะ hide
+                        duration: -1,
                         backgroundColor: "#374151",
                         close: true
                     });
                 }
             };
 
+            // ---------- แปลงขนาดไฟล์ ----------
+            function formatBytes(bytes, decimals = 2) {
+                if (!+bytes) return '0 Bytes';
+                const k = 1024;
+                const dm = decimals < 0 ? 0 : decimals;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+            }
+
+            // ---------- Image Upload & Preview Logic ----------
+            const imageInput = document.getElementById('imageInput');
+            const dropzone = document.getElementById('dropzone');
+            const previewContainer = document.getElementById('previewContainer');
+            let selectedFiles = [];
+
+            dropzone.addEventListener('click', () => imageInput.click());
+
+            // Drag and drop into zone
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('border-blue-500', 'bg-blue-50');
+            });
+            dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-blue-500', 'bg-blue-50'));
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('border-blue-500', 'bg-blue-50');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            imageInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+                imageInput.value = '';
+            });
+
+            function handleFiles(files) {
+                const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+
+                const newFiles = Array.from(files).filter(file => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    return allowedExts.includes(ext);
+                });
+
+                if (newFiles.length < files.length) {
+                    toast.error('ระบบรองรับเฉพาะไฟล์ .jpg, .png และ .webp เท่านั้น');
+                }
+
+                if (selectedFiles.length + newFiles.length > 3) {
+                    toast.warn('อัปโหลดรูปภาพได้สูงสุด 3 รูปเท่านั้น');
+                    const availableSlots = 3 - selectedFiles.length;
+                    selectedFiles = [...selectedFiles, ...newFiles.slice(0, availableSlots)];
+                } else {
+                    selectedFiles = [...selectedFiles, ...newFiles];
+                }
+                renderPreviews();
+            }
+
+            function renderPreviews() {
+                previewContainer.innerHTML = '';
+                selectedFiles.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const div = document.createElement('div');
+                        div.className = 'relative border rounded-xl overflow-hidden bg-white shadow-sm flex flex-col';
+
+                        div.innerHTML = `
+                            <div class="relative aspect-video w-full flex-shrink-0 bg-gray-100">
+                                <img src="${e.target.result}" class="object-cover w-full h-full absolute inset-0 pointer-events-none" alt="preview">
+                                
+                                <button type="button" onclick="removeImage(${index})" class="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-white shadow-md transition z-10" title="ลบรูปภาพ">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+
+                            <div class="p-2 border-t border-gray-100 flex flex-col justify-center items-center text-center">
+                                <p class="text-xs font-medium text-gray-700 truncate w-full px-2" title="${file.name}">${file.name}</p>
+                                <p class="text-[11px] text-gray-500 mt-0.5">${formatBytes(file.size)}</p>
+                            </div>
+                        `;
+                        previewContainer.appendChild(div);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            window.removeImage = function(index) {
+                selectedFiles.splice(index, 1);
+                renderPreviews();
+            };
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                selectedFiles = [];
+                renderPreviews();
+            });
+
+            // ---------- Form Logic (API Fetch, validation, etc) ----------
             function attachFieldListeners(form) {
                 if (!form) return;
-
                 form.addEventListener('input', handleClearError);
                 form.addEventListener('change', handleClearError);
 
@@ -286,47 +398,35 @@
             attachFieldListeners(form);
             const submitBtn = form.querySelector("button[type='submit']");
 
-            // ---------- DOM refs สำหรับ dynamic fields ----------
             const requestTypeSelect = document.getElementById('request_type');
             const categoryGroup = document.getElementById('categoryGroup');
             const symptomGroup = document.getElementById('symptomGroup');
-
             const issueCategorySelect = document.getElementById('issue_category');
             const issueCategoryOther = document.getElementById('issue_category_other');
-
             const issueSymptomSelect = document.getElementById('issue_symptom');
             const issueSymptomOther = document.getElementById('issue_symptom_other');
-
             const OTHER_VALUE = '__other__';
 
-            // ---------- small utils ----------
             function show(el, yes) {
-                if (!el) return;
-                el.classList.toggle('hidden', !yes);
+                if (el) el.classList.toggle('hidden', !yes);
             }
 
             function enable(el, yes) {
-                if (!el) return;
-                el.disabled = !yes;
+                if (el) el.disabled = !yes;
             }
 
             function requireField(el, yes) {
-                if (!el) return;
-                el.required = !!yes;
+                if (el) el.required = !!yes;
             }
 
             function escapeHtml(str) {
-                return String(str)
-                    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-                    .replace(/'/g, '&#039;');
+                return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
             }
 
             function resetIssueCategory() {
                 if (!issueCategorySelect) return;
                 issueCategorySelect.innerHTML = '<option value="">— เลือกประเภท —</option>';
                 enable(issueCategorySelect, false);
-                // other
                 show(issueCategoryOther, false);
                 enable(issueCategoryOther, false);
                 requireField(issueCategoryOther, false);
@@ -337,7 +437,6 @@
                 if (!issueSymptomSelect) return;
                 issueSymptomSelect.innerHTML = '<option value="">— เลือกอาการปัญหา —</option>';
                 enable(issueSymptomSelect, false);
-                // other
                 show(issueSymptomOther, false);
                 enable(issueSymptomOther, false);
                 requireField(issueSymptomOther, false);
@@ -350,8 +449,6 @@
             resetIssueSymptom();
 
             if (requestTypeSelect) {
-
-
                 requestTypeSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
                 enable(requestTypeSelect, false);
 
@@ -380,8 +477,7 @@
                             requestTypeSelect.innerHTML = '<option value="">ไม่พบข้อมูล</option>';
                             toast.warn('ไม่พบรายการปัญหาการใช้งาน');
                         }
-                    })
-                    .catch(err => {
+                    }).catch(err => {
                         console.error(err);
                         requestTypeSelect.innerHTML = '<option value="">โหลดข้อมูลไม่สำเร็จ</option>';
                         toast.error('โหลดรายการปัญหาการใช้งานไม่สำเร็จ');
@@ -400,7 +496,6 @@
                         return;
                     }
 
-                    // แสดงกลุ่มประเภท และโหลดจาก API
                     show(categoryGroup, true);
                     issueCategorySelect.innerHTML = '<option value="">กำลังโหลด...</option>';
                     try {
@@ -422,7 +517,6 @@
                                 opts.push(`<option value="${escapeHtml(code)}" data-id="${escapeHtml(id)}">${escapeHtml(name_th)}</option>`);
                             }
                         }
-                        // เพิ่ม "อื่นๆ"
                         opts.push(`<option value="${OTHER_VALUE}" data-id="">อื่นๆ (พิมพ์ระบุเอง)</option>`);
                         issueCategorySelect.innerHTML = opts.join('');
                         enable(issueCategorySelect, true);
@@ -435,7 +529,6 @@
                 });
             }
 
-            // ---------- เปลี่ยนประเภท ----------
             if (issueCategorySelect) {
                 issueCategorySelect.addEventListener('change', async function() {
                     resetIssueSymptom();
@@ -444,23 +537,18 @@
                     const issueCategoryId = selectedOpt?.dataset.id || '';
 
                     if (selected === OTHER_VALUE) {
-                        // เปิดช่องกรอกประเภทอื่นๆ
                         show(issueCategoryOther, true);
                         enable(issueCategoryOther, true);
                         requireField(issueCategoryOther, true);
-
-                        // อาการ: เปิดกลุ่ม + ใช้กรอกเอง (ซ่อน select)
                         show(symptomGroup, true);
                         show(issueSymptomSelect, false);
                         enable(issueSymptomSelect, false);
                         requireField(issueSymptomSelect, false);
-
                         show(issueSymptomOther, true);
                         enable(issueSymptomOther, true);
                         requireField(issueSymptomOther, true);
                         return;
                     } else {
-                        // ปิดช่องกรอกประเภทอื่นๆ
                         show(issueCategoryOther, false);
                         enable(issueCategoryOther, false);
                         requireField(issueCategoryOther, false);
@@ -471,14 +559,11 @@
                         return;
                     }
 
-                    // โหลดอาการ
                     issueSymptomSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
                     show(symptomGroup, true);
                     show(issueSymptomSelect, true);
                     enable(issueSymptomSelect, true);
                     requireField(issueSymptomSelect, true);
-
-                    // ปิดช่องกรอกอาการ other ไว้ก่อน
                     show(issueSymptomOther, false);
                     enable(issueSymptomOther, false);
                     requireField(issueSymptomOther, false);
@@ -514,7 +599,6 @@
                 });
             }
 
-            // ---------- เปลี่ยนอาการ ----------
             if (issueSymptomSelect) {
                 issueSymptomSelect.addEventListener('change', function() {
                     if (this.value === OTHER_VALUE) {
@@ -539,13 +623,7 @@
                     });
                     el.focus();
                 }
-                Toastify({
-                    text: "❌ " + msg,
-                    duration: 4000,
-                    gravity: "bottom",
-                    position: "right",
-                    backgroundColor: "#dc2626"
-                }).showToast();
+                toast.error(msg);
                 return false;
             }
 
@@ -565,15 +643,11 @@
 
                 if (!rt) return showError("กรุณาเลือกปัญหาการใช้งาน", requestTypeSelect);
                 if (!cat) return showError("กรุณาเลือกประเภท", issueCategorySelect);
-
-                if (cat === OTHER_VALUE && !(issueCategoryOther?.value || '').trim())
-                    return showError("กรุณาระบุประเภท (อื่นๆ)", issueCategoryOther);
+                if (cat === OTHER_VALUE && !(issueCategoryOther?.value || '').trim()) return showError("กรุณาระบุประเภท (อื่นๆ)", issueCategoryOther);
 
                 if (cat !== OTHER_VALUE) {
-                    if (!sym)
-                        return showError("กรุณาเลือกอาการปัญหา", issueSymptomSelect);
-                    if (sym === OTHER_VALUE && !(issueSymptomOther?.value || '').trim())
-                        return showError("กรุณาระบุอาการปัญหา (อื่นๆ)", issueSymptomOther);
+                    if (!sym) return showError("กรุณาเลือกอาการปัญหา", issueSymptomSelect);
+                    if (sym === OTHER_VALUE && !(issueSymptomOther?.value || '').trim()) return showError("กรุณาระบุอาการปัญหา (อื่นๆ)", issueSymptomOther);
                 } else if (!(issueSymptomOther?.value || '').trim()) {
                     return showError("กรุณาระบุอาการปัญหา (อื่นๆ)", issueSymptomOther);
                 }
@@ -587,19 +661,20 @@
                 return true;
             }
 
-
-            // ---------- Submit (no redirect) + Toastify ----------
             form.addEventListener("submit", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
 
                 const valid = validateClient();
-                if (!valid) {
-                    return false;
-                }
+                if (!valid) return false;
 
                 (async () => {
                     const fd = new FormData(form);
+
+                    fd.delete('images[]');
+                    selectedFiles.forEach((file) => {
+                        fd.append('images[]', file);
+                    });
 
                     const loadingToast = toast.loading("กำลังส่งคำขอ…");
                     loadingToast.showToast();
@@ -621,6 +696,9 @@
                             const code = data.ticket_code || data.ticket_id || "";
                             toast.success(`บันทึกสำเร็จ! ${code ? "รหัสการแจ้ง " + code : ""}`);
                             form.reset();
+
+                            selectedFiles = [];
+                            renderPreviews();
 
                             show(categoryGroup, false);
                             show(symptomGroup, false);

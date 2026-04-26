@@ -21,6 +21,9 @@ $reportDetails = $controller->reportDetails;
 $statuses      = $controller->statuses;
 $canEditStatus = $controller->canEditStatus;
 
+$stmtSolvers = $pdo->query("SELECT id, display_th FROM users WHERE solver = 1 ORDER BY display_th ASC");
+$solvers = $stmtSolvers->fetchAll(PDO::FETCH_ASSOC);
+
 if ($reportDetails === null) {
 ?>
     <!DOCTYPE html>
@@ -340,7 +343,16 @@ if ($reportDetails === null) {
                                                             สาเหตุ: <?= htmlspecialchars($log['cause'] ?? "-") ?>
                                                         </p>
                                                         <p class="text-xs text-gray-500 mb-2 flex items-center">
-                                                            ผู้แก้ไขปัญหา: <?= htmlspecialchars($log['solver_by'] ?? "-") ?>
+                                                            ผู้แก้ไขปัญหา:
+                                                            <?php
+                                                            if (!empty($log['solver_display'])) {
+                                                                echo htmlspecialchars($log['solver_display']);
+                                                            } elseif (!empty($log['solver_by_other_remark'])) {
+                                                                echo htmlspecialchars($log['solver_by_other_remark']) . ' (อื่นๆ)';
+                                                            } else {
+                                                                echo "-";
+                                                            }
+                                                            ?>
                                                         </p>
 
                                                         <div class="flex items-center flex-wrap gap-2 mt-3">
@@ -580,8 +592,17 @@ if ($reportDetails === null) {
                         <input id="cause_input_add" name="cause" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" />
                     </div>
                     <div>
-                        <label for="solver_by_input_add" class="block text-sm font-semibold text-gray-700 mb-1">ผู้แก้ไขปัญหา</label>
-                        <input id="solver_by_input_add" name="solver_by" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" />
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">ผู้แก้ไขปัญหา</label>
+                        <select id="solver_by_add" name="solver_by" onchange="toggleSolverRemark('add')" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                            <option value="">-- เลือกผู้แก้ไขปัญหา --</option>
+                            <?php foreach ($solvers as $solver): ?>
+                                <option value="<?= $solver['id'] ?>"><?= htmlspecialchars($solver['display_th']) ?></option>
+                            <?php endforeach; ?>
+                            <option value="other">อื่นๆ (ระบุเอง)</option>
+                        </select>
+                        <div id="solver_remark_div_add" class="hidden mt-2">
+                            <input type="text" id="solver_by_other_remark_add" name="solver_by_other_remark" placeholder="ระบุชื่อผู้แก้ไขปัญหา..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                        </div>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">วันที่เปลี่ยนสถานะ</label>
@@ -628,8 +649,17 @@ if ($reportDetails === null) {
                         <input id="cause_input" name="cause" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
                     </div>
                     <div>
-                        <label for="solver_by_input" class="block text-sm font-semibold text-gray-700 mb-1">ผู้แก้ไขปัญหา</label>
-                        <input id="solver_by_input" name="solver_by" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">ผู้แก้ไขปัญหา</label>
+                        <select id="solver_by_edit" name="solver_by" onchange="toggleSolverRemark('edit')" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                            <option value="">-- เลือกผู้แก้ไขปัญหา --</option>
+                            <?php foreach ($solvers as $solver): ?>
+                                <option value="<?= $solver['id'] ?>"><?= htmlspecialchars($solver['display_th']) ?></option>
+                            <?php endforeach; ?>
+                            <option value="other">อื่นๆ (ระบุเอง)</option>
+                        </select>
+                        <div id="solver_remark_div_edit" class="hidden mt-2">
+                            <input type="text" id="solver_by_other_remark_edit" name="solver_by_other_remark" placeholder="ระบุชื่อผู้แก้ไขปัญหา..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">วันที่เปลี่ยนสถานะ</label>
@@ -732,6 +762,16 @@ if ($reportDetails === null) {
                 document.getElementById('addStatusForm').reset();
             }
 
+            function toggleSolverRemark(mode) {
+                const select = document.getElementById(`solver_by_${mode}`);
+                const div = document.getElementById(`solver_remark_div_${mode}`);
+                if (select.value === 'other') {
+                    div.classList.remove('hidden');
+                } else {
+                    div.classList.add('hidden');
+                }
+            }
+
             // Edit Status Modal
             function openEditStatusModal(log) {
                 document.getElementById('editStatusModal').classList.remove('hidden');
@@ -740,13 +780,35 @@ if ($reportDetails === null) {
                 document.getElementById('edit_log_id').value = log.id;
                 document.getElementById('symptom_input').value = log.symptom ?? "";
                 document.getElementById('cause_input').value = log.cause ?? "";
-                document.getElementById('solver_by_input').value = log.solver_by ?? "";
 
-                const select = document.getElementById('edit_to_status');
+                // ตั้งค่าผู้แก้ไขปัญหา
+                const solverSelect = document.getElementById('solver_by_edit');
+                const solverRemarkDiv = document.getElementById('solver_remark_div_edit');
+                const solverRemarkInput = document.getElementById('solver_by_other_remark_edit');
+
+                solverSelect.value = '';
+                solverRemarkInput.value = log.solver_by_other_remark ?? "";
+                solverRemarkDiv.classList.add('hidden');
+
+                if (log.solver_by) {
+                    // เช็คว่ามีค่า ID นี้ใน Select ไหม
+                    let exists = Array.from(solverSelect.options).some(opt => opt.value == log.solver_by);
+                    if (exists) {
+                        solverSelect.value = log.solver_by;
+                    } else if (log.solver_by_other_remark) {
+                        solverSelect.value = 'other';
+                        solverRemarkDiv.classList.remove('hidden');
+                    }
+                } else if (log.solver_by_other_remark) {
+                    solverSelect.value = 'other';
+                    solverRemarkDiv.classList.remove('hidden');
+                }
+
+                const selectToStatus = document.getElementById('edit_to_status');
                 if (log.to_status_id) {
-                    select.value = log.to_status_id;
+                    selectToStatus.value = log.to_status_id;
                 } else {
-                    for (let option of select.options) {
+                    for (let option of selectToStatus.options) {
                         if (option.text.trim() === (log.to_status_name || "").trim()) {
                             option.selected = true;
                             break;
@@ -868,7 +930,7 @@ if ($reportDetails === null) {
                 const ticketId = "<?= $reportDetails['id'] ?>";
 
                 fetch('/api/reports/delete_ticket.php', {
-                        method: 'POST', 
+                        method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },

@@ -19,12 +19,30 @@ if (!is_array($data)) {
     exit;
 }
 
+// รับค่าจาก Payload
 $logId            = isset($data['log_id']) ? (int)$data['log_id'] : 0;
 $toStatusId       = isset($data['to_status_id']) ? (int)$data['to_status_id'] : 0;
 $symptom          = trim($data['symptom'] ?? '');
 $cause            = trim($data['cause'] ?? '');
-$solver_by        = trim($data['solver_by'] ?? '');
 $statusChangedRaw = trim($data['status_changed_at'] ?? '');
+
+// ค่าที่รับเพิ่มมาใหม่ สำหรับผู้แก้ไขปัญหา
+$solverByRaw            = trim($data['solver_by'] ?? '');
+$solverByOtherRemark    = trim($data['solver_by_other_remark'] ?? '');
+
+// จัดการค่า Solver
+$solverId = null;
+if ($solverByRaw === 'other') {
+    $solverId = null; 
+    // เก็บค่า $solverByOtherRemark ตามที่พิมพ์ส่งมา
+} elseif (is_numeric($solverByRaw) && $solverByRaw > 0) {
+    $solverId = (int)$solverByRaw;
+    $solverByOtherRemark = null; // ถ้าเลือก user ในระบบ ให้ล้างค่าช่อง remark ทิ้ง
+} else {
+    // กรณีไม่ได้เลือกหรือส่งค่าว่างมา
+    $solverId = null;
+    $solverByOtherRemark = null;
+}
 
 $errors = [];
 if ($logId <= 0)     $errors[] = 'log_id is required';
@@ -62,23 +80,25 @@ try {
     $sql = "
         UPDATE ticket_status_logs
         SET 
-            to_status    = :to_status,
-            symptom      = :symptom,
-            cause        = :cause,
-            solver_by    = :solver_by,
-            changed_at   = :changed_at
+            to_status              = :to_status,
+            symptom                = :symptom,
+            cause                  = :cause,
+            solver_by              = :solver_by,
+            solver_by_other_remark = :solver_by_other_remark,
+            changed_at             = :changed_at
         WHERE id = :log_id
         LIMIT 1
     ";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
-        ':to_status'  => $toStatusId,
-        ':symptom'    => $symptom,
-        ':cause'      => $cause,
-        ':solver_by'  => $solver_by,
-        ':changed_at' => $changedAt,
-        ':log_id'     => $logId,
+        ':to_status'              => $toStatusId,
+        ':symptom'                => $symptom,
+        ':cause'                  => $cause,
+        ':solver_by'              => $solverId,
+        ':solver_by_other_remark' => $solverByOtherRemark,
+        ':changed_at'             => $changedAt,
+        ':log_id'                 => $logId,
     ]);
 
     // 3. 🟢 สั่งประมวลผลเวลาใหม่ 🟢

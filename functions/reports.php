@@ -329,6 +329,8 @@ function getReportDetails(string $code): ?array {
             sl.symptom      AS status_symptom,
             sl.cause        AS status_cause,
             sl.solver_by    AS status_solver_by,
+            u.display_th    AS solver_display,          -- เพิ่มชื่อ User
+            sl.solver_by_other_remark AS status_solver_by_other_remark, -- เพิ่มช่องอื่นๆ
             sl.changed_at   AS status_changed_at,
             s_from.name_th  AS from_status_name,
             s_to.name_th    AS to_status_name,
@@ -341,6 +343,7 @@ function getReportDetails(string $code): ?array {
             LEFT JOIN ticket_status_logs AS sl     ON sl.ticket_id      = r.id
             LEFT JOIN ticket_statuses    AS s_from ON s_from.id         = sl.from_status
             LEFT JOIN ticket_statuses    AS s_to   ON s_to.id           = sl.to_status
+            LEFT JOIN users              AS u      ON u.id              = sl.solver_by -- JOIN หา users
         WHERE r.code = :code
         ORDER BY sl.changed_at DESC, sl.id DESC
     ";
@@ -377,29 +380,30 @@ function getReportDetails(string $code): ?array {
         'department'         => $first['department'],
         'reporter_name'      => $first['reporter_name'],
         'request_type_name'  => $first['request_type_name'],
-        'display_category'   => $catName ?: '-',    // เพิ่มฟิลด์ใหม่สำหรับแสดงผล
-        'display_symptom'    => $symName ?: '-',    // เพิ่มฟิลด์ใหม่สำหรับแสดงผล
+        'display_category'   => $catName ?: '-',
+        'display_symptom'    => $symName ?: '-',
         'ticket_status_logs' => [],
-        'images'             => [],                 // เตรียม Array ว่างไว้สำหรับเก็บรูปภาพ
+        'images'             => [],
     ];
 
     foreach ($rows as $row) {
         if (!is_null($row['status_log_id'])) {
             $work['ticket_status_logs'][] = [
-                'id'                 => (int)$row['status_log_id'],
-                'status_changed_at'  => $row['status_changed_at'],
-                'from_status_name'   => $row['from_status_name'],
-                'to_status_name'     => $row['to_status_name'],
-                'status_from_style'  => $row['status_from_style'],
-                'status_to_style'    => $row['status_to_style'],
-                'symptom'            => $row['status_symptom'],
-                'cause'              => $row['status_cause'],
-                'solver_by'          => $row['status_solver_by'],
+                'id'                     => (int)$row['status_log_id'],
+                'status_changed_at'      => $row['status_changed_at'],
+                'from_status_name'       => $row['from_status_name'],
+                'to_status_name'         => $row['to_status_name'],
+                'status_from_style'      => $row['status_from_style'],
+                'status_to_style'        => $row['status_to_style'],
+                'symptom'                => $row['status_symptom'],
+                'cause'                  => $row['status_cause'],
+                'solver_by'              => $row['status_solver_by'],
+                'solver_display'         => $row['solver_display'],
+                'solver_by_other_remark' => $row['status_solver_by_other_remark'],
             ];
         }
     }
 
-    // --- เพิ่มส่วนดึงข้อมูลรูปภาพจากตาราง ticket_images ---
     $sqlImg = "SELECT id, file_path FROM ticket_images WHERE ticket_id = :ticket_id ORDER BY id ASC";
     $stmtImg = $pdo->prepare($sqlImg);
     $stmtImg->execute(['ticket_id' => $work['id']]);

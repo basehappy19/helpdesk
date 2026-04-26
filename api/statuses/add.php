@@ -25,8 +25,25 @@ $ticketId         = isset($data['work_id']) ? (int)$data['work_id'] : 0;
 $toStatusId       = isset($data['to_status_id']) ? (int)$data['to_status_id'] : 0;
 $symptom          = trim($data['symptom'] ?? '');
 $cause            = trim($data['cause'] ?? '');
-$solver_by        = trim($data['solver_by'] ?? '');
 $statusChangedRaw = trim($data['status_changed_at'] ?? '');
+
+// ค่าที่รับเพิ่มมาใหม่ สำหรับผู้แก้ไขปัญหา
+$solverByRaw            = trim($data['solver_by'] ?? '');
+$solverByOtherRemark    = trim($data['solver_by_other_remark'] ?? '');
+
+// จัดการค่า Solver
+$solverId = null;
+if ($solverByRaw === 'other') {
+    $solverId = null; 
+    // เก็บค่า $solverByOtherRemark ตามที่พิมพ์ส่งมา
+} elseif (is_numeric($solverByRaw) && $solverByRaw > 0) {
+    $solverId = (int)$solverByRaw;
+    $solverByOtherRemark = null; // ถ้าเลือก user ในระบบ ให้ล้างค่าช่อง remark ทิ้ง
+} else {
+    // กรณีไม่ได้เลือกหรือส่งค่าว่างมา
+    $solverId = null;
+    $solverByOtherRemark = null;
+}
 
 $errors = [];
 if ($ticketId <= 0)   $errors[] = 'work_id is required';
@@ -58,20 +75,21 @@ try {
     // 2. บันทึกประวัติสถานะลง ticket_status_logs
     $sqlInsert = "
         INSERT INTO ticket_status_logs 
-            (ticket_id, from_status, to_status, symptom, cause, solver_by, changed_by, changed_at)
+            (ticket_id, from_status, to_status, symptom, cause, solver_by, solver_by_other_remark, changed_by, changed_at)
         VALUES 
-            (:ticket_id, :from_status, :to_status, :symptom, :cause, :solver_by, :changed_by, :changed_at)
+            (:ticket_id, :from_status, :to_status, :symptom, :cause, :solver_by, :solver_by_other_remark, :changed_by, :changed_at)
     ";
     $stmtLog = $pdo->prepare($sqlInsert);
     $stmtLog->execute([
-        ':ticket_id'   => $ticketId,
-        ':from_status' => $fromStatus,
-        ':to_status'   => $toStatusId,
-        ':symptom'     => $symptom,
-        ':cause'       => $cause,
-        ':solver_by'   => $solver_by,
-        ':changed_by'  => null, // ถ้าระบบรองรับ Auth ให้ดึง session user_id มาใส่ตรงนี้
-        ':changed_at'  => $changedAt,
+        ':ticket_id'              => $ticketId,
+        ':from_status'            => $fromStatus,
+        ':to_status'              => $toStatusId,
+        ':symptom'                => $symptom,
+        ':cause'                  => $cause,
+        ':solver_by'              => $solverId,
+        ':solver_by_other_remark' => $solverByOtherRemark,
+        ':changed_by'             => null, // ถ้าระบบรองรับ Auth ให้ดึง session user_id มาใส่ตรงนี้
+        ':changed_at'             => $changedAt,
     ]);
 
     // 3. 🟢 เรียกใช้งาน Sync 🟢

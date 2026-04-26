@@ -63,6 +63,23 @@ $symptomStats = $pdo->query("
     ORDER BY total_tickets DESC, display_category ASC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
+// ---- เพิ่ม Query สำหรับดึงสถิติรายบุคคล (Solver) ----
+$solverStats = $pdo->query("
+    SELECT 
+        u.id,
+        u.display_th AS solver_name,
+        COUNT(DISTINCT sl.ticket_id) AS total_handled,
+        COUNT(DISTINCT CASE WHEN t.resolved_at IS NOT NULL THEN sl.ticket_id END) AS total_resolved,
+        COUNT(DISTINCT CASE WHEN t.resolved_at IS NOT NULL AND t.sla_due_at IS NOT NULL AND t.resolved_at <= t.sla_due_at THEN sl.ticket_id END) AS sla_pass,
+        COUNT(DISTINCT CASE WHEN t.resolved_at IS NOT NULL AND t.sla_due_at IS NOT NULL AND t.resolved_at > t.sla_due_at THEN sl.ticket_id END) AS sla_fail
+    FROM users u
+    LEFT JOIN ticket_status_logs sl ON u.id = sl.solver_by
+    LEFT JOIN tickets t ON sl.ticket_id = t.id
+    WHERE u.solver = 1
+    GROUP BY u.id, u.display_th
+    ORDER BY total_handled DESC
+")->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 
 <!DOCTYPE html>
@@ -223,6 +240,80 @@ $symptomStats = $pdo->query("
                                     </td>
                                     <td class="px-6 py-4 text-sm text-center">
                                         <?php if ($totalDone > 0): ?>
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold <?= $rateBadge ?>">
+                                                <?= $rate ?>%
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-xs text-slate-400">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-8">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    สถิติการปฏิบัติงานของผู้แก้ไขปัญหา (Solver Performance)
+                </h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider">
+                            <th class="px-6 py-4 font-bold">ชื่อผู้แก้ไขปัญหา</th>
+                            <th class="px-4 py-4 font-bold text-center">งานที่เกี่ยวข้อง (รายการ)</th>
+                            <th class="px-4 py-4 font-bold text-center">งานที่เสร็จสิ้น</th>
+                            <th class="px-4 py-4 font-bold text-center text-emerald-600">ผ่านเกณฑ์ SLA</th>
+                            <th class="px-4 py-4 font-bold text-center text-red-500">เกินเวลา SLA</th>
+                            <th class="px-6 py-4 font-bold text-center">อัตราสำเร็จ SLA (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <?php if (empty($solverStats)): ?>
+                            <tr>
+                                <td colspan="6" class="px-6 py-8 text-center text-slate-400">ยังไม่มีข้อมูลผู้แก้ไขปัญหาในระบบ</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($solverStats as $stat):
+                                $totalResolved = (int)$stat['total_resolved'];
+                                $passCount = (int)$stat['sla_pass'];
+                                $rate = $totalResolved > 0 ? round(($passCount / $totalResolved) * 100, 2) : 0;
+
+                                $rateBadge = 'bg-slate-100 text-slate-600';
+                                if ($totalResolved > 0) {
+                                    if ($rate >= 80) {
+                                        $rateBadge = 'bg-emerald-100 text-emerald-700';
+                                    } else {
+                                        $rateBadge = 'bg-red-100 text-red-700';
+                                    }
+                                }
+                            ?>
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-6 py-4 text-sm font-medium text-slate-700">
+                                        <?= htmlspecialchars($stat['solver_name']) ?>
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-center font-bold text-blue-600">
+                                        <?= number_format($stat['total_handled']) ?>
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-center font-medium text-slate-600">
+                                        <?= number_format($totalResolved) ?>
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-center font-bold text-emerald-500 bg-emerald-50/30">
+                                        <?= number_format($stat['sla_pass']) ?>
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-center font-bold text-red-500 bg-red-50/30">
+                                        <?= number_format($stat['sla_fail']) ?>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-center">
+                                        <?php if ($totalResolved > 0): ?>
                                             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold <?= $rateBadge ?>">
                                                 <?= $rate ?>%
                                             </span>

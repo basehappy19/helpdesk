@@ -6,11 +6,11 @@ class ManageUsersController {
         $this->pdo = $pdo;
     }
 
-    // 1. ดึงผู้ใช้ทั้งหมดมาแสดงในตาราง
+    // 1. ดึงผู้ใช้ทั้งหมดมาแสดงในตาราง (เพิ่มดึง solver มาด้วย)
     public function getAllUsers($page = 1, $limit = 10) {
         $offset = ($page - 1) * $limit;
         
-        $stmt = $this->pdo->prepare("SELECT id, username, display_th, phone_ext, role, created_at FROM users ORDER BY created_at DESC LIMIT :limit OFFSET :offset");
+        $stmt = $this->pdo->prepare("SELECT id, username, display_th, phone_ext, role, solver, created_at FROM users ORDER BY created_at DESC LIMIT :limit OFFSET :offset");
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
         $stmt->execute();
@@ -58,14 +58,18 @@ class ManageUsersController {
                 return ['status' => 'error', 'message' => 'ชื่อผู้ใช้นี้มีในระบบแล้ว'];
             }
 
+            // ถ้ามี checkbox ติ๊กมาจะมีค่าใน $_POST['solver'] = 1 ถ้าไม่ติ๊กจะไม่มีคีย์นี้
+            $solver = isset($data['solver']) ? 1 : 0;
             $hashed_password = password_hash($data['password'], PASSWORD_DEFAULT);
-            $stmt = $this->pdo->prepare("INSERT INTO users (username, password, display_th, phone_ext, role) VALUES (:username, :password, :display_th, :phone_ext, :role)");
+            
+            $stmt = $this->pdo->prepare("INSERT INTO users (username, password, display_th, phone_ext, role, solver) VALUES (:username, :password, :display_th, :phone_ext, :role, :solver)");
             $stmt->execute([
                 'username' => trim($data['username']),
                 'password' => $hashed_password,
                 'display_th' => trim($data['display_th']),
                 'phone_ext' => trim($data['phone_ext']),
-                'role' => $data['role']
+                'role' => $data['role'],
+                'solver' => $solver
             ]);
             return ['status' => 'success', 'message' => 'เพิ่มผู้ใช้งานสำเร็จ'];
         } catch (PDOException $e) {
@@ -75,23 +79,27 @@ class ManageUsersController {
 
     private function editUser($data) {
         try {
+            $solver = isset($data['solver']) ? 1 : 0;
+
             // ถ้ายกเลิกการเปลี่ยนรหัสผ่าน (ปล่อยว่าง)
             if (empty($data['password'])) {
-                $stmt = $this->pdo->prepare("UPDATE users SET display_th = :display_th, phone_ext = :phone_ext, role = :role WHERE id = :id");
+                $stmt = $this->pdo->prepare("UPDATE users SET display_th = :display_th, phone_ext = :phone_ext, role = :role, solver = :solver WHERE id = :id");
                 $params = [
                     'display_th' => trim($data['display_th']),
                     'phone_ext' => trim($data['phone_ext']),
                     'role' => $data['role'],
+                    'solver' => $solver,
                     'id' => $data['user_id']
                 ];
             } else {
                 $hashed_password = password_hash($data['password'], PASSWORD_DEFAULT);
-                $stmt = $this->pdo->prepare("UPDATE users SET password = :password, display_th = :display_th, phone_ext = :phone_ext, role = :role WHERE id = :id");
+                $stmt = $this->pdo->prepare("UPDATE users SET password = :password, display_th = :display_th, phone_ext = :phone_ext, role = :role, solver = :solver WHERE id = :id");
                 $params = [
                     'password' => $hashed_password,
                     'display_th' => trim($data['display_th']),
                     'phone_ext' => trim($data['phone_ext']),
                     'role' => $data['role'],
+                    'solver' => $solver,
                     'id' => $data['user_id']
                 ];
             }

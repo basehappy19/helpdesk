@@ -74,6 +74,7 @@ $totalPages = $result['total_pages'];
                                 <th class="px-6 py-4">ชื่อ-นามสกุล</th>
                                 <th class="px-6 py-4">เบอร์ภายใน</th>
                                 <th class="px-6 py-4">สิทธิ์</th>
+                                <th class="px-6 py-4">ผู้แก้ไขปัญหา</th>
                                 <th class="px-6 py-4">วันที่สร้าง</th>
                                 <th class="px-6 py-4 text-right">จัดการ</th>
                             </tr>
@@ -104,6 +105,13 @@ $totalPages = $result['total_pages'];
                                             <?php echo $u['role']; ?>
                                         </span>
                                     </td>
+                                    <td class="px-6 py-4">
+                                        <?php if ($u['solver'] == 1): ?>
+                                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">ใช่</span>
+                                        <?php else: ?>
+                                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">ไม่ใช่</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td class="px-6 py-4 text-slate-500 text-xs">
                                         <?php echo date('d/m/Y H:i', strtotime($u['created_at'])); ?>
                                     </td>
@@ -131,7 +139,7 @@ $totalPages = $result['total_pages'];
 
                             <?php if (empty($all_users)): ?>
                                 <tr>
-                                    <td colspan="6" class="px-6 py-8 text-center text-slate-500">ไม่พบข้อมูลผู้ใช้งาน</td>
+                                    <td colspan="7" class="px-6 py-8 text-center text-slate-500">ไม่พบข้อมูลผู้ใช้งาน</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -156,7 +164,6 @@ $totalPages = $result['total_pages'];
 
                             <div class="flex items-center gap-1 mx-1">
                                 <?php
-                                // คำนวณช่วงเลขหน้าที่จะแสดง (แสดงสูงสุด 5 หน้า)
                                 $window = 2;
                                 $start = max(1, $currentPage - $window);
                                 $end = min($totalPages, $currentPage + $window);
@@ -176,7 +183,7 @@ $totalPages = $result['total_pages'];
 
                                 if ($end < $totalPages): ?>
                                     <?php if ($end < $totalPages - 1): ?><span class="text-slate-300">...</span><?php endif; ?>
-                                    <a href="?p=<?php echo $totalPages; ?>" class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><?php echo $totalPages; ?></a>
+                                    <a href="?page=manage-users&p=<?php echo $totalPages; ?>" class="w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"><?php echo $totalPages; ?></a>
                                 <?php endif; ?>
                             </div>
 
@@ -241,6 +248,15 @@ $totalPages = $result['total_pages'];
                         </div>
                     </div>
 
+                    <div class="pt-2">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="solver" id="solver" value="1" class="sr-only peer">
+                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <span class="ms-3 text-sm font-medium text-slate-700">ตั้งให้เป็นผู้แก้ไขปัญหา (Solver)</span>
+                        </label>
+                        <p class="text-xs text-slate-500 mt-1">หากเปิดใช้งาน ผู้ใช้นี้จะไปปรากฏในตัวเลือก "ผู้แก้ไขปัญหา" ในหน้ารายละเอียด</p>
+                    </div>
+
                     <div class="pt-4 flex gap-3 justify-end">
                         <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">ยกเลิก</button>
                         <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm">บันทึกข้อมูล</button>
@@ -282,6 +298,11 @@ $totalPages = $result['total_pages'];
             document.getElementById('pwdAsterisk').style.display = isAdd ? 'inline' : 'none';
             document.getElementById('pwdHelp').style.display = isAdd ? 'none' : 'block';
 
+            // Reset Toggle Slider ให้ค่าเริ่มต้นเป็นปิดเวลาเปิด Add Modal
+            if(isAdd) {
+                document.getElementById('solver').checked = false;
+            }
+
             modal.classList.remove('hidden');
         }
 
@@ -292,6 +313,9 @@ $totalPages = $result['total_pages'];
             document.getElementById('display_th').value = userData.display_th;
             document.getElementById('phone_ext').value = userData.phone_ext;
             document.getElementById('role').value = userData.role;
+            
+            // เช็คว่า user เป็น solver ไหม ถ้าเป็นให้ติ๊กเปิดไว้
+            document.getElementById('solver').checked = (userData.solver == 1);
         }
 
         function closeModal() {

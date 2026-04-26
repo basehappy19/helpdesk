@@ -101,6 +101,7 @@
     --container-md: 28rem;
     --container-lg: 32rem;
     --container-2xl: 42rem;
+    --container-3xl: 48rem;
     --container-5xl: 64rem;
     --container-7xl: 80rem;
     --text-xs: 0.75rem;
@@ -403,6 +404,9 @@
   }
   .z-\[100\] {
     z-index: 100;
+  }
+  .z-\[110\] {
+    z-index: 110;
   }
   .z-\[9999\] {
     z-index: 9999;
@@ -778,6 +782,9 @@
   }
   .max-w-2xl {
     max-width: var(--container-2xl);
+  }
+  .max-w-3xl {
+    max-width: var(--container-3xl);
   }
   .max-w-5xl {
     max-width: var(--container-5xl);
@@ -3045,6 +3052,11 @@
   .sm\:w-14 {
     @media (width >= 40rem) {
       width: calc(var(--spacing) * 14);
+    }
+  }
+  .sm\:w-64 {
+    @media (width >= 40rem) {
+      width: calc(var(--spacing) * 64);
     }
   }
   .sm\:w-auto {

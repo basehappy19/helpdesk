@@ -13,10 +13,16 @@ class ManageIssueCategoriesController {
 
     public function getAll($page = 1, $limit = 50) {
         $offset = ($page - 1) * $limit;
-        $sql = "SELECT c.*, rt.name_th as rt_name 
+        
+        // ดึง Categories และนับจำนวน Symptoms ที่เชื่อมโยง
+        $sql = "SELECT c.*, rt.name_th as rt_name, COUNT(s.id) as symptom_count 
                 FROM issue_categories c 
                 LEFT JOIN request_types rt ON c.request_type_id = rt.id 
-                ORDER BY c.id DESC LIMIT :limit OFFSET :offset";
+                LEFT JOIN issue_symptoms s ON c.id = s.category_id
+                GROUP BY c.id 
+                ORDER BY c.id DESC 
+                LIMIT :limit OFFSET :offset";
+                
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
@@ -32,6 +38,7 @@ class ManageIssueCategoriesController {
         if ($_POST['action'] === 'add') return $this->add($_POST);
         if ($_POST['action'] === 'edit') return $this->edit($_POST);
         if ($_POST['action'] === 'delete') return $this->delete($_POST['id']);
+        if ($_POST['action'] === 'edit_symptom') return $this->editSymptomFast($_POST); // รองรับแก้ไขอาการด่วน
         return null;
     }
 
@@ -40,9 +47,9 @@ class ManageIssueCategoriesController {
             $code = empty(trim($data['code'])) ? null : trim($data['code']);
             $stmt = $this->pdo->prepare("INSERT INTO issue_categories (request_type_id, code, name_th) VALUES (:rt_id, :code, :name_th)");
             $stmt->execute(['rt_id' => $data['request_type_id'], 'code' => $code, 'name_th' => trim($data['name_th'])]);
-            return ['status' => 'success', 'message' => 'เพิ่มข้อมูลสำเร็จ'];
+            return ['status' => 'success', 'message' => 'เพิ่มประเภทสำเร็จ'];
         } catch (PDOException $e) {
-            if ($e->getCode() == 23000) return ['status' => 'error', 'message' => 'รหัส หรือ ชื่อ นี้มีในระบบแล้ว'];
+            if ($e->getCode() == 23000) return ['status' => 'error', 'message' => 'รหัส หรือ ชื่อนี้ มีในระบบแล้ว'];
             return ['status' => 'error', 'message' => 'Error: ' . $e->getMessage()];
         }
     }
@@ -52,9 +59,9 @@ class ManageIssueCategoriesController {
             $code = empty(trim($data['code'])) ? null : trim($data['code']);
             $stmt = $this->pdo->prepare("UPDATE issue_categories SET request_type_id = :rt_id, code = :code, name_th = :name_th WHERE id = :id");
             $stmt->execute(['rt_id' => $data['request_type_id'], 'code' => $code, 'name_th' => trim($data['name_th']), 'id' => $data['id']]);
-            return ['status' => 'success', 'message' => 'แก้ไขข้อมูลสำเร็จ'];
+            return ['status' => 'success', 'message' => 'แก้ไขประเภทสำเร็จ'];
         } catch (PDOException $e) {
-            if ($e->getCode() == 23000) return ['status' => 'error', 'message' => 'รหัส หรือ ชื่อ นี้มีในระบบแล้ว'];
+            if ($e->getCode() == 23000) return ['status' => 'error', 'message' => 'รหัส หรือ ชื่อนี้ มีในระบบแล้ว'];
             return ['status' => 'error', 'message' => 'Error: ' . $e->getMessage()];
         }
     }
@@ -66,6 +73,19 @@ class ManageIssueCategoriesController {
             return ['status' => 'success', 'message' => 'ลบข้อมูลสำเร็จ'];
         } catch (PDOException $e) {
             if ($e->getCode() == 23000) return ['status' => 'error', 'message' => 'ไม่สามารถลบได้ เนื่องจากมีอาการ(Symptoms)เชื่อมโยงอยู่'];
+            return ['status' => 'error', 'message' => 'Error: ' . $e->getMessage()];
+        }
+    }
+
+    // ฟังก์ชันแก้ไขอาการด่วน (Symptom) จากหน้าประเภท
+    private function editSymptomFast($data) {
+        try {
+            $code = empty(trim($data['sym_code'])) ? null : trim($data['sym_code']);
+            $stmt = $this->pdo->prepare("UPDATE issue_symptoms SET code = :code, name_th = :name_th, sla_minutes = :sla WHERE id = :id");
+            $stmt->execute(['code' => $code, 'name_th' => trim($data['sym_name']), 'sla' => (int)$data['sla_minutes'], 'id' => $data['sym_id']]);
+            return ['status' => 'success', 'message' => 'แก้ไขอาการสำเร็จ'];
+        } catch (PDOException $e) {
+            if ($e->getCode() == 23000) return ['status' => 'error', 'message' => 'รหัส หรือ ชื่ออาการนี้ มีในระบบแล้ว'];
             return ['status' => 'error', 'message' => 'Error: ' . $e->getMessage()];
         }
     }

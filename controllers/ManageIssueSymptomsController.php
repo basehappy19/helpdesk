@@ -8,7 +8,6 @@ class ManageIssueSymptomsController {
     public function __construct($pdo) { $this->pdo = $pdo; }
 
     public function getCategories() {
-        // ดึงหมวดหมู่และต่อชื่อประเภทหลักมาโชว์ให้เลือกง่ายขึ้น
         $sql = "SELECT c.id, c.name_th, rt.name_th as rt_name 
                 FROM issue_categories c 
                 LEFT JOIN request_types rt ON c.request_type_id = rt.id 
@@ -16,20 +15,46 @@ class ManageIssueSymptomsController {
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getAll($page = 1, $limit = 50) {
+    public function getAll($page = 1, $limit = 50, $filterCategoryId = 0) {
         $offset = ($page - 1) * $limit;
-        $sql = "SELECT s.*, c.name_th as cat_name, rt.name_th as rt_name 
+        
+        $whereClause = "";
+        $params = [];
+        
+        // กรองตามหมวดหมู่ถ้ามีการเลือก Filter
+        if ($filterCategoryId > 0) {
+            $whereClause = "WHERE s.category_id = :filter_cat";
+            $params[':filter_cat'] = $filterCategoryId;
+        }
+
+        // นับจำนวนตั๋วที่เคยใช้อาการนี้ (เพื่อป้องกันการลบ)
+        $sql = "SELECT s.*, c.name_th as cat_name, rt.name_th as rt_name,
+                (SELECT COUNT(id) FROM tickets WHERE symptom_id = s.id) as ticket_count
                 FROM issue_symptoms s 
                 LEFT JOIN issue_categories c ON s.category_id = c.id 
                 LEFT JOIN request_types rt ON c.request_type_id = rt.id 
+                $whereClause
                 ORDER BY s.id DESC LIMIT :limit OFFSET :offset";
+                
         $stmt = $this->pdo->prepare($sql);
+        
+        foreach($params as $key => $val) {
+            $stmt->bindValue($key, $val, PDO::PARAM_INT);
+        }
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $total = $this->pdo->query("SELECT COUNT(*) FROM issue_symptoms")->fetchColumn();
+        // นับจำนวนหน้า
+        $countSql = "SELECT COUNT(*) FROM issue_symptoms s $whereClause";
+        $countStmt = $this->pdo->prepare($countSql);
+        foreach($params as $key => $val) {
+            $countStmt->bindValue($key, $val, PDO::PARAM_INT);
+        }
+        $countStmt->execute();
+        $total = $countStmt->fetchColumn();
+
         return ['data' => $data, 'total_pages' => ceil($total / $limit)];
     }
 
@@ -53,7 +78,7 @@ class ManageIssueSymptomsController {
             ]);
             return ['status' => 'success', 'message' => 'เพิ่มข้อมูลสำเร็จ'];
         } catch (PDOException $e) {
-            if ($e->getCode() == 23000) return ['status' => 'error', 'message' => 'รหัส หรือ ชื่ออาการในหมวดหมู่นี้ มีในระบบแล้ว'];
+            if ($e->getCode() == 23000) return ['status' => 'error', 'message' => 'รหัส หรือ ชื่ออาการในประเภทนี้ มีในระบบแล้ว'];
             return ['status' => 'error', 'message' => 'Error: ' . $e->getMessage()];
         }
     }
@@ -71,14 +96,20 @@ class ManageIssueSymptomsController {
             ]);
             return ['status' => 'success', 'message' => 'แก้ไขข้อมูลสำเร็จ'];
         } catch (PDOException $e) {
-            if ($e->getCode() == 23000) return ['status' => 'error', 'message' => 'รหัส หรือ ชื่ออาการในหมวดหมู่นี้ มีในระบบแล้ว'];
+            if ($e->getCode() == 23000) return ['status' => 'error', 'message' => 'รหัส หรือ ชื่ออาการในประเภทนี้ มีในระบบแล้ว'];
             return ['status' => 'error', 'message' => 'Error: ' . $e->getMessage()];
         }
     }
 
     private function delete($id) {
         try {
-            // ON DELETE CASCADE ถูกเซ็ตไว้ใน Database แล้ว ถ้าลบได้จะลบทันที
+            // ป้องกันการลบหากมีตั๋วผูกอยู่ (ทำที่ View แล้ว แต่อันนี้กันเหนียวฝั่ง Backend)
+            $checkStmt = $this->pdo->prepare("SELECT COUNT(*) FROM tickets WHERE symptom_id = :id");
+            $checkStmt->execute(['id' => $id]);
+            if ($checkStmt->fetchColumn() > 0) {
+                return ['status' => 'error', 'message' => 'ไม่สามารถลบได้ เนื่องจากมีประวัติการแจ้งปัญหานี้แล้ว'];
+            }
+
             $stmt = $this->pdo->prepare("DELETE FROM issue_symptoms WHERE id = :id");
             $stmt->execute(['id' => $id]);
             return ['status' => 'success', 'message' => 'ลบข้อมูลสำเร็จ'];

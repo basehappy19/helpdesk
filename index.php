@@ -60,6 +60,15 @@ switch ($page) {
     case 'work-categories':
         load_page('work-categories', ['user' => $user]);
         break;
+    case 'manage-request-types':
+        load_page('manage-request-types', ['user' => $user]);
+        break;
+    case 'manage-issue-categories':
+        load_page('manage-issue-categories', ['user' => $user]);
+        break;
+    case 'manage-issue-symptoms':
+        load_page('manage-issue-symptoms', ['user' => $user]);
+        break;
     case 'logout':
         $_SESSION = [];
 

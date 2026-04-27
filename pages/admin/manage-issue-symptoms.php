@@ -1,8 +1,4 @@
 <?php
-if (!isset($user['id']) || !in_array($user['role'], ['SYSTEM', 'ADMIN'])) {
-    header('Location: ./');
-    exit();
-}
 
 global $pdo;
 require_once './controllers/ManageIssueSymptomsController.php';

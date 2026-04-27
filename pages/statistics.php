@@ -1,6 +1,9 @@
 <?php
 global $pdo;
 
+require_once __DIR__ . '/../utils/DateHelper.php';
+
+
 // ==========================================
 // 1. DATA PREPARATION (Controller Logic)
 // ==========================================
@@ -110,7 +113,7 @@ $solverStats = $pdo->query("
                 <p class="text-slate-500 mt-2">สรุปข้อมูลการให้บริการและประเมินมาตรฐาน SLA</p>
             </div>
             <div class="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 text-sm font-medium text-slate-600">
-                ข้อมูล ณ วันที่: <span class="text-indigo-600"><?= formatDateThaiBuddhistWithOutTime(date('Y-m-d')) ?></span>
+                ข้อมูล ณ วันที่: <span class="text-indigo-600"><?= DateHelper::formatDateThaiBuddhistWithOutTime(date('Y-m-d')) ?></span>
             </div>
         </div>
 

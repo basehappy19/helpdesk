@@ -6,7 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 date_default_timezone_set('Asia/Bangkok');
 
 require_once __DIR__ . '/../../vendor/autoload.php';
-require_once __DIR__ . '/../../db/conn.php';
+require_once __DIR__ . '/../../configs/db_connection.php';
 
 try {
     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../../');

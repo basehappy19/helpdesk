@@ -1,22 +1,17 @@
 <?php
 global $pdo;
 
-// เรียกใช้ Controller
 require_once __DIR__ . '/../controllers/ReportDetailController.php';
-require_once __DIR__ . '/../functions/status.php';
 
 $ticketCode = isset($_GET['code']) ? $_GET['code'] : 0;
 
-// เริ่มต้นการทำงานของ Controller
 $controller = new ReportDetailController($pdo, $user ?? null, $ticketCode);
 
-// เช็ค Error ถ้า Code ไม่ถูกต้องให้เด้งกลับ
 if ($controller->error === "INVALID_CODE") {
     header('Location: ./?page=reports');
     exit;
 }
 
-// ดึงตัวแปรจาก Controller มาใช้งานใน View
 $reportDetails = $controller->reportDetails;
 $statuses      = $controller->statuses;
 $canEditStatus = $controller->canEditStatus;
@@ -83,34 +78,6 @@ if ($reportDetails === null) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>รายละเอียดปัญหา #<?= htmlspecialchars($reportDetails['code'] ?? '') ?> | HelpDesk</title>
     <?php include './lib/style.php'; ?>
-    <style>
-        /* สไตล์สำหรับ Toast Alert */
-        .hot-toast {
-            position: fixed;
-            top: 24px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-150%) scale(0.9);
-            opacity: 0;
-            background: white;
-            color: #374151;
-            padding: 12px 16px;
-            border-radius: 9999px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.35s cubic-bezier(0.21, 1.02, 0.73, 1);
-            z-index: 99999;
-            pointer-events: none;
-        }
-
-        .hot-toast.show {
-            transform: translateX(-50%) translateY(0) scale(1);
-            opacity: 1;
-        }
-    </style>
 </head>
 
 <body>
@@ -334,7 +301,7 @@ if ($reportDetails === null) {
                                                             <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                             </svg>
-                                                            <?= htmlspecialchars(formatDateThaiBuddhist($log['status_changed_at'])) ?>
+                                                            <?= htmlspecialchars(DateHelper::formatDateThaiBuddhist($log['status_changed_at'])) ?>
                                                         </p>
                                                         <p class="text-xs text-gray-500 mb-2 flex items-center">
                                                             อาการ: <?= htmlspecialchars($log['symptom'] ?? "-") ?>
@@ -403,7 +370,7 @@ if ($reportDetails === null) {
                             <div class="relative">
                                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่แจ้งเรื่อง</p>
                                 <p class="text-sm font-medium text-gray-800">
-                                    <?= formatDateThaiBuddhist($reportDetails['created_at']) ?>
+                                    <?= htmlspecialchars(DateHelper::formatDateThaiBuddhist($reportDetails['created_at'])) ?>
                                 </p>
                             </div>
 
@@ -411,7 +378,7 @@ if ($reportDetails === null) {
                                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่รับเรื่อง</p>
                                 <?php if (!empty($reportDetails['accepted_at'])): ?>
                                     <p class="text-sm font-medium text-indigo-700">
-                                        <?= formatDateThaiBuddhist($reportDetails['accepted_at']) ?>
+                                        <?= htmlspecialchars(DateHelper::formatDateThaiBuddhist($reportDetails['accepted_at'])) ?>
                                     </p>
                                 <?php else: ?>
                                     <p class="text-sm font-medium text-yellow-500 flex items-center">
@@ -427,7 +394,7 @@ if ($reportDetails === null) {
                                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">กำหนดเสร็จตาม SLA</p>
                                 <?php if (!empty($reportDetails['sla_due_at'])): ?>
                                     <p class="text-sm font-medium text-orange-600">
-                                        <?= formatDateThaiBuddhist($reportDetails['sla_due_at']) ?>
+                                        <?= htmlspecialchars(DateHelper::formatDateThaiBuddhist($reportDetails['sla_due_at'])) ?>
                                     </p>
                                 <?php else: ?>
                                     <p class="text-sm font-medium text-gray-400">
@@ -440,7 +407,7 @@ if ($reportDetails === null) {
                                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">วันที่แก้ไขเสร็จ</p>
                                 <?php if (!empty($reportDetails['resolved_at'])): ?>
                                     <p class="text-sm font-medium text-emerald-600">
-                                        <?= formatDateThaiBuddhist($reportDetails['resolved_at']) ?>
+                                        <?= htmlspecialchars(DateHelper::formatDateThaiBuddhist($reportDetails['resolved_at'])) ?>
                                     </p>
                                 <?php else: ?>
                                     <p class="text-sm font-medium text-gray-400">

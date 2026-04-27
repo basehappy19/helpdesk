@@ -1,14 +1,15 @@
 <?php
 
-require_once __DIR__ . "/../functions/reports.php"; 
+require_once __DIR__ . "/../models/TicketModel.php"; 
 
-class ReportDetailController {
+class TicketDetailController {
     private $pdo;
     private $user;
     private $ticketCode;
+    private $ticketModel; // เปลี่ยนชื่อตัวแปรให้ตรงกับ Model
 
-    // ตัวแปรสำหรับส่งไปให้ View ใช้งาน
-    public $reportDetails = null;
+    // เปลี่ยนชื่อตัวแปรที่ส่งไป View
+    public $ticketDetails = null; 
     public $statuses = [];
     public $canEditStatus = false;
     public $error = null;
@@ -18,27 +19,28 @@ class ReportDetailController {
         $this->user = $user;
         $this->ticketCode = (string)$ticketCode;
         
+        // เรียกใช้ TicketModel
+        $this->ticketModel = new TicketModel($this->pdo);
+        
         $this->loadData();
         $this->checkPermissions();
     }
 
-    // 1. โหลดข้อมูลรายละเอียดปัญหาและสถานะ
     private function loadData() {
         if ($this->ticketCode === '') {
             $this->error = "INVALID_CODE";
             return;
         }
 
-        // ดึงข้อมูลรายละเอียดปัญหา (จาก functions/reports.php)
-        $this->reportDetails = getReportDetails($this->ticketCode);
+        // เรียกใช้เมธอด getTicketDetails จาก Model
+        $this->ticketDetails = $this->ticketModel->getTicketDetails($this->ticketCode);
 
-        // ถ้ามีข้อมูลปัญหา ให้ดึงรายการสถานะทั้งหมดมาเตรียมไว้สำหรับ Dropdown
-        if ($this->reportDetails) {
+        // ถ้าพบข้อมูลตั๋วค่อยดึง Status มาแสดงใน Dropdown
+        if ($this->ticketDetails) {
             $this->loadStatuses();
         }
     }
 
-    // 2. ดึงข้อมูลสถานะจากตาราง ticket_statuses
     private function loadStatuses() {
         try {
             $stmt = $this->pdo->query("SELECT id, name_th FROM ticket_statuses ORDER BY sort_order ASC, id ASC");
@@ -48,7 +50,6 @@ class ReportDetailController {
         }
     }
 
-    // 3. ตรวจสอบสิทธิ์ (Role) ว่าสามารถจัดการสถานะได้หรือไม่
     private function checkPermissions() {
         if (isset($this->user['role']) && in_array($this->user['role'], ['SYSTEM', 'ADMIN', 'SERVICE'])) {
             $this->canEditStatus = true;

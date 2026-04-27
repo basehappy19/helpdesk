@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-require_once __DIR__ . '/../../../db/conn.php';
+require_once __DIR__ . '/../../../configs/db_connection.php';
 
 // 1. รับค่าและตรวจสอบ category_id จาก GET request
 $categoryId = isset($_GET['id']) ? (int)$_GET['id'] : 0;

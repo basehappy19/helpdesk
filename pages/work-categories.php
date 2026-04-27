@@ -6,12 +6,12 @@ if (!isset($user['id']) || $user['role'] !== 'SYSTEM') {
 }
 
 global $pdo;
-require_once __DIR__ . '/../controllers/WorkCategoriesController.php';
+require_once __DIR__ . '/../controllers/WorkCategoryController.php';
 
 $currentPage = isset($_GET['p']) ? max(1, intval($_GET['p'])) : 1;
 $limit = 100;
 
-$manageController = new WorkCategoriesController($pdo);
+$manageController = new WorkCategoryController($pdo);
 $response = $manageController->handleRequest();
 
 if ($response) {

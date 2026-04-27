@@ -1,16 +1,12 @@
 <?php
-if (!isset($user['id']) || !in_array($user['role'], ['SYSTEM', 'ADMIN'])) {
-    header('Location: ./');
-    exit();
-}
 
 global $pdo;
-require_once './controllers/ManageIssueCategoriesController.php';
+require_once './controllers/ManageRequestTypesController.php';
 
 $currentPage = isset($_GET['p']) ? max(1, intval($_GET['p'])) : 1;
 $limit = 50;
 
-$controller = new ManageIssueCategoriesController($pdo);
+$controller = new ManageRequestTypesController($pdo);
 $response = $controller->handleRequest();
 
 if ($response) {
@@ -27,7 +23,6 @@ unset($_SESSION['toast_message'], $_SESSION['toast_status']);
 $result = $controller->getAll($currentPage, $limit);
 $items = $result['data'];
 $totalPages = $result['total_pages'];
-$requestTypes = $controller->getRequestTypes();
 ?>
 
 <!DOCTYPE html>
@@ -35,7 +30,7 @@ $requestTypes = $controller->getRequestTypes();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>จัดการประเภท | HelpDesk</title>
+    <title>จัดการปัญหาการใช้งาน | HelpDesk</title>
     <?php include './lib/style.php'; ?>
     <style>
         .hot-toast {
@@ -72,12 +67,12 @@ $requestTypes = $controller->getRequestTypes();
         <div class="max-w-7xl mx-auto md:px-4 sm:px-6 lg:px-8 py-8">
             <div class="md:px-0 px-4 flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900">จัดการประเภท</h1>
-                    <p class="text-sm text-gray-500 mt-1">ตั้งค่าหมวดหมู่รอง โดยต้องเชื่อมกับปัญหาการใช้งาน</p>
+                    <h1 class="text-3xl font-bold text-gray-900">จัดการปัญหาการใช้งาน</h1>
+                    <p class="text-sm text-gray-500 mt-1">หมวดหมู่ระดับบนสุด</p>
                 </div>
                 <button onclick="openModal('add')" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    เพิ่มประเภท
+                    เพิ่มปัญหาการใช้งาน
                 </button>
             </div>
 
@@ -86,28 +81,22 @@ $requestTypes = $controller->getRequestTypes();
                     <table class="w-full text-left text-sm whitespace-nowrap">
                         <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                             <tr>
-                                <th class="px-6 py-4">ปัญหาการใช้งาน</th>
                                 <th class="px-6 py-4">รหัส (Code)</th>
-                                <th class="px-6 py-4">ชื่อประเภท</th>
-                                <th class="px-6 py-4 text-center">อาการย่อย</th>
+                                <th class="px-6 py-4">ชื่อปัญหาการใช้งาน</th>
+                                <th class="px-6 py-4 text-center">ประเภทย่อย</th>
                                 <th class="px-6 py-4 text-right">จัดการ</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             <?php foreach ($items as $item): ?>
                                 <tr class="hover:bg-slate-50/50 transition-colors">
-                                    <td class="px-6 py-4 text-slate-600">
-                                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
-                                            <?php echo htmlspecialchars($item['rt_name']); ?>
-                                        </span>
-                                    </td>
                                     <td class="px-6 py-4 font-medium text-indigo-600"><?php echo htmlspecialchars($item['code'] ?? '-'); ?></td>
                                     <td class="px-6 py-4 font-medium text-slate-800"><?php echo htmlspecialchars($item['name_th']); ?></td>
                                     
                                     <td class="px-6 py-4 text-center">
-                                        <?php if ($item['symptom_count'] > 0): ?>
-                                            <button onclick="viewLinkedSymptoms(<?php echo $item['id']; ?>, '<?php echo htmlspecialchars($item['name_th'], ENT_QUOTES); ?>')" class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-100 group">
-                                                <?php echo $item['symptom_count']; ?> อาการ
+                                        <?php if ($item['category_count'] > 0): ?>
+                                            <button onclick="viewLinkedCategories(<?php echo $item['id']; ?>, '<?php echo htmlspecialchars($item['name_th'], ENT_QUOTES); ?>')" class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-100 group">
+                                                <?php echo $item['category_count']; ?> ประเภท
                                                 <svg class="w-3.5 h-3.5 ml-1 opacity-50 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -115,7 +104,7 @@ $requestTypes = $controller->getRequestTypes();
                                             </button>
                                         <?php else: ?>
                                             <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
-                                                0 อาการ
+                                                0 ประเภท
                                             </span>
                                         <?php endif; ?>
                                     </td>
@@ -125,14 +114,14 @@ $requestTypes = $controller->getRequestTypes();
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                         </button>
                                         
-                                        <?php if ($item['symptom_count'] > 0): ?>
-                                            <button disabled class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-300 cursor-not-allowed" title="ไม่สามารถลบได้เนื่องจากมีอาการย่อยผูกอยู่">
+                                        <?php if ($item['category_count'] > 0): ?>
+                                            <button disabled class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-300 cursor-not-allowed" title="ไม่สามารถลบได้เนื่องจากมีประเภทย่อยผูกอยู่">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                 </svg>
                                             </button>
                                         <?php else: ?>
-                                            <form action="" method="POST" class="inline-block" onsubmit="return confirm('ยืนยันการลบประเภทนี้?');">
+                                            <form action="" method="POST" class="inline-block" onsubmit="return confirm('ยืนยันการลบปัญหาการใช้งานนี้?');">
                                                 <input type="hidden" name="action" value="delete">
                                                 <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
                                                 <button type="submit" class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-500 hover:bg-red-50 transition-colors" title="ลบ">
@@ -144,7 +133,7 @@ $requestTypes = $controller->getRequestTypes();
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (empty($items)): ?>
-                                <tr><td colspan="5" class="px-6 py-8 text-center text-slate-500">ไม่พบข้อมูล</td></tr>
+                                <tr><td colspan="4" class="px-6 py-8 text-center text-slate-500">ไม่พบข้อมูล</td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -158,33 +147,19 @@ $requestTypes = $controller->getRequestTypes();
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             <div class="relative bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg w-full">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-slate-100">
-                    <h3 class="text-lg font-bold text-slate-900" id="modalTitle">เพิ่มประเภท</h3>
+                    <h3 class="text-lg font-bold text-slate-900" id="modalTitle">เพิ่มข้อมูล</h3>
                 </div>
                 <form id="itemForm" action="" method="POST" class="p-6 space-y-4">
                     <input type="hidden" name="action" id="formAction" value="add">
                     <input type="hidden" name="id" id="itemId" value="">
-                    
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">ปัญหาการใช้งาน <span class="text-red-500">*</span></label>
-                        <select name="request_type_id" id="request_type_id" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                            <option value="">-- เลือกปัญหาการใช้งาน * --</option>
-                            <?php foreach ($requestTypes as $rt): ?>
-                                <option value="<?= $rt['id'] ?>"><?= htmlspecialchars($rt['name_th']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">รหัส (Code)</label>
+                        <input type="text" name="code" id="code" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">รหัส (Code)</label>
-                            <input type="text" name="code" id="code" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อประเภท <span class="text-red-500">*</span></label>
-                            <input type="text" name="name_th" id="name_th" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-                        </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อปัญหาการใช้งาน <span class="text-red-500">*</span></label>
+                        <input type="text" name="name_th" id="name_th" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
-
                     <div class="pt-4 flex gap-3 justify-end">
                         <button type="button" onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">ยกเลิก</button>
                         <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm">บันทึกข้อมูล</button>
@@ -194,20 +169,20 @@ $requestTypes = $controller->getRequestTypes();
         </div>
     </div>
 
-    <div id="viewSymptomsModal" class="fixed inset-0 z-[100] hidden opacity-0 transition-opacity duration-300 ease-out">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeViewSymptomsModal()"></div>
+    <div id="viewCategoriesModal" class="fixed inset-0 z-[100] hidden opacity-0 transition-opacity duration-300 ease-out">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeViewCategoriesModal()"></div>
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-            <div id="viewSymptomsModalContent" class="relative bg-white rounded-2xl text-left overflow-hidden shadow-xl transform scale-95 opacity-0 transition-all duration-300 ease-out sm:my-8 max-w-3xl w-full flex flex-col max-h-[80vh]">
+            <div id="viewCategoriesModalContent" class="relative bg-white rounded-2xl text-left overflow-hidden shadow-xl transform scale-95 opacity-0 transition-all duration-300 ease-out sm:my-8 max-w-2xl w-full flex flex-col max-h-[80vh]">
                 <div class="bg-white px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                     <h3 class="text-lg font-bold text-slate-900">
-                        อาการย่อยของ: <span id="viewSymptomsTitle" class="text-indigo-600 font-medium"></span>
+                        ประเภทย่อยของ: <span id="viewCategoriesTitle" class="text-indigo-600 font-medium"></span>
                     </h3>
-                    <button type="button" onclick="closeViewSymptomsModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <button type="button" onclick="closeViewCategoriesModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                 </div>
                 <div class="p-6 overflow-y-auto flex-grow bg-slate-50/50">
-                    <div id="symptomsLoading" class="text-center py-8 text-slate-500 hidden">
+                    <div id="categoriesLoading" class="text-center py-8 text-slate-500 hidden">
                         <svg class="animate-spin h-8 w-8 text-indigo-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -219,12 +194,11 @@ $requestTypes = $controller->getRequestTypes();
                             <thead class="bg-slate-50">
                                 <tr>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500">รหัส (Code)</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500">ชื่ออาการย่อย</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold text-slate-500">SLA (นาที)</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500">ชื่อประเภทย่อย</th>
                                     <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500">แก้ไข</th>
                                 </tr>
                             </thead>
-                            <tbody id="symptomsTableBody" class="divide-y divide-slate-100 text-sm">
+                            <tbody id="categoriesTableBody" class="divide-y divide-slate-100 text-sm">
                             </tbody>
                         </table>
                     </div>
@@ -233,32 +207,26 @@ $requestTypes = $controller->getRequestTypes();
         </div>
     </div>
 
-    <div id="editSymptomModal" class="fixed inset-0 z-[110] hidden">
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeEditSymptomModal()"></div>
+    <div id="editCategoryModal" class="fixed inset-0 z-[110] hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeEditCategoryModal()"></div>
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             <div class="relative bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-md w-full">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-slate-100">
-                    <h3 class="text-lg font-bold text-slate-900">แก้ไขอาการย่อย</h3>
+                    <h3 class="text-lg font-bold text-slate-900">แก้ไขประเภทย่อย</h3>
                 </div>
-                <form id="editSymptomForm" action="" method="POST" class="p-6 space-y-4">
-                    <input type="hidden" name="action" value="edit_symptom">
-                    <input type="hidden" name="sym_id" id="edit_sym_id" value="">
-                    
+                <form id="editCategoryForm" action="" method="POST" class="p-6 space-y-4">
+                    <input type="hidden" name="action" value="edit_category">
+                    <input type="hidden" name="cat_id" id="edit_cat_id" value="">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">รหัส (Code)</label>
-                        <input type="text" name="sym_code" id="edit_sym_code" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <input type="text" name="cat_code" id="edit_cat_code" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">ชื่ออาการย่อย <span class="text-red-500">*</span></label>
-                        <input type="text" name="sym_name" id="edit_sym_name" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อประเภทย่อย <span class="text-red-500">*</span></label>
+                        <input type="text" name="cat_name" id="edit_cat_name" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">เวลา SLA (นาที) <span class="text-red-500">*</span></label>
-                        <input type="number" name="sla_minutes" id="edit_sla_minutes" min="1" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-                    </div>
-
                     <div class="pt-4 flex gap-3 justify-end">
-                        <button type="button" onclick="closeEditSymptomModal()" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">ยกเลิก</button>
+                        <button type="button" onclick="closeEditCategoryModal()" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">ยกเลิก</button>
                         <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm">บันทึกแก้ไข</button>
                     </div>
                 </form>
@@ -288,13 +256,13 @@ $requestTypes = $controller->getRequestTypes();
             document.addEventListener('DOMContentLoaded', () => { showToast("<?php echo addslashes($flash_message); ?>", "<?php echo $flash_status; ?>"); });
         <?php endif; ?>
 
-        // Modal การจัดการประเภท
+        // Modal การจัดการ Request Type
         const modal = document.getElementById('itemModal');
         const form = document.getElementById('itemForm');
 
         function openModal(mode) {
             form.reset();
-            document.getElementById('modalTitle').textContent = mode === 'add' ? 'เพิ่มประเภท' : 'แก้ไขประเภท';
+            document.getElementById('modalTitle').textContent = mode === 'add' ? 'เพิ่มปัญหาการใช้งาน' : 'แก้ไขปัญหาการใช้งาน';
             document.getElementById('formAction').value = mode;
             modal.classList.remove('hidden');
         }
@@ -302,21 +270,20 @@ $requestTypes = $controller->getRequestTypes();
         function openEditModal(data) {
             openModal('edit');
             document.getElementById('itemId').value = data.id;
-            document.getElementById('request_type_id').value = data.request_type_id;
             document.getElementById('code').value = data.code || '';
             document.getElementById('name_th').value = data.name_th;
         }
 
         function closeModal() { modal.classList.add('hidden'); }
 
-        // Modal ดูอาการ (Symptoms)
-        function viewLinkedSymptoms(categoryId, nameTh) {
-            document.getElementById('viewSymptomsTitle').textContent = nameTh;
-            document.getElementById('symptomsTableBody').innerHTML = '';
-            document.getElementById('symptomsLoading').classList.remove('hidden');
+        // Modal ดูหมวดหมู่ย่อย
+        function viewLinkedCategories(requestTypeId, nameTh) {
+            document.getElementById('viewCategoriesTitle').textContent = nameTh;
+            document.getElementById('categoriesTableBody').innerHTML = '';
+            document.getElementById('categoriesLoading').classList.remove('hidden');
 
-            const viewModal = document.getElementById('viewSymptomsModal');
-            const modalContent = document.getElementById('viewSymptomsModalContent');
+            const viewModal = document.getElementById('viewCategoriesModal');
+            const modalContent = document.getElementById('viewCategoriesModalContent');
 
             viewModal.classList.remove('hidden');
             setTimeout(() => {
@@ -326,43 +293,38 @@ $requestTypes = $controller->getRequestTypes();
                 modalContent.classList.add('scale-100', 'opacity-100');
             }, 10);
 
-            fetch(`/api/admin/issue_categories/get_symptoms.php?id=${categoryId}`)
+            fetch(`/api/admin/request_types/get_categories.php?id=${requestTypeId}`)
                 .then(r => r.json())
                 .then(d => {
-                    document.getElementById('symptomsLoading').classList.add('hidden');
+                    document.getElementById('categoriesLoading').classList.add('hidden');
                     if (d.ok && d.data.length > 0) {
                         let html = '';
-                        d.data.forEach(sym => {
+                        d.data.forEach(cat => {
                             html += `
                             <tr class="hover:bg-slate-50 transition-colors">
-                                <td class="px-4 py-3 text-indigo-600 font-medium">${escapeHtml(sym.code || '-')}</td>
-                                <td class="px-4 py-3 text-slate-800 font-medium">${escapeHtml(sym.name_th)}</td>
-                                <td class="px-4 py-3 text-center">
-                                    <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs font-bold">
-                                        ${sym.sla_minutes} นาที
-                                    </span>
-                                </td>
+                                <td class="px-4 py-3 text-indigo-600 font-medium">${escapeHtml(cat.code || '-')}</td>
+                                <td class="px-4 py-3 text-slate-800 font-medium">${escapeHtml(cat.name_th)}</td>
                                 <td class="px-4 py-3 text-right">
-                                    <button onclick='openQuickEditSymptom(${JSON.stringify(sym)})' class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors" title="แก้ไข">
+                                    <button onclick='openQuickEditCategory(${JSON.stringify(cat)})' class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors" title="แก้ไข">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                     </button>
                                 </td>
                             </tr>`;
                         });
-                        document.getElementById('symptomsTableBody').innerHTML = html;
+                        document.getElementById('categoriesTableBody').innerHTML = html;
                     } else {
-                        document.getElementById('symptomsTableBody').innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-slate-500">ไม่พบข้อมูลอาการ</td></tr>';
+                        document.getElementById('categoriesTableBody').innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-slate-500">ไม่พบข้อมูลประเภทย่อย</td></tr>';
                     }
                 })
                 .catch(e => {
-                    document.getElementById('symptomsLoading').classList.add('hidden');
-                    document.getElementById('symptomsTableBody').innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
+                    document.getElementById('categoriesLoading').classList.add('hidden');
+                    document.getElementById('categoriesTableBody').innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
                 });
         }
 
-        function closeViewSymptomsModal() {
-            const viewModal = document.getElementById('viewSymptomsModal');
-            const modalContent = document.getElementById('viewSymptomsModalContent');
+        function closeViewCategoriesModal() {
+            const viewModal = document.getElementById('viewCategoriesModal');
+            const modalContent = document.getElementById('viewCategoriesModalContent');
             viewModal.classList.remove('opacity-100');
             viewModal.classList.add('opacity-0');
             modalContent.classList.remove('scale-100', 'opacity-100');
@@ -370,20 +332,19 @@ $requestTypes = $controller->getRequestTypes();
             setTimeout(() => { viewModal.classList.add('hidden'); }, 300);
         }
 
-        // Modal แก้ไขอาการด่วน (Symptom)
-        function openQuickEditSymptom(sym) {
-            closeViewSymptomsModal(); // ปิด Modal ดูอาการไปก่อน
+        // Modal แก้ไข Category ย่อยโดยตรง
+        function openQuickEditCategory(cat) {
+            closeViewCategoriesModal(); // ปิด Modal อันแรกไปก่อน
             
-            document.getElementById('edit_sym_id').value = sym.id;
-            document.getElementById('edit_sym_code').value = sym.code || '';
-            document.getElementById('edit_sym_name').value = sym.name_th;
-            document.getElementById('edit_sla_minutes').value = sym.sla_minutes;
+            document.getElementById('edit_cat_id').value = cat.id;
+            document.getElementById('edit_cat_code').value = cat.code || '';
+            document.getElementById('edit_cat_name').value = cat.name_th;
             
-            document.getElementById('editSymptomModal').classList.remove('hidden');
+            document.getElementById('editCategoryModal').classList.remove('hidden');
         }
 
-        function closeEditSymptomModal() {
-            document.getElementById('editSymptomModal').classList.add('hidden');
+        function closeEditCategoryModal() {
+            document.getElementById('editCategoryModal').classList.add('hidden');
         }
 
         function escapeHtml(str) {

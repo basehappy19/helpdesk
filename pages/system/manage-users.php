@@ -6,7 +6,7 @@ if (!isset($user['id']) || $user['role'] !== 'SYSTEM') {
 }
 
 global $pdo;
-require_once __DIR__ . '/../controllers/ManageUsersController.php';
+require_once __DIR__ . '/../../controllers/ManageUsersController.php';
 
 $currentPage = isset($_GET['p']) ? max(1, intval($_GET['p'])) : 1;
 $limit = 50;

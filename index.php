@@ -2,98 +2,82 @@
 session_start();
 ob_start();
 
-require_once __DIR__ . '/db/conn.php';
-require_once __DIR__ . '/functions/formatDate.php';
-require_once __DIR__ . '/functions/users.php';
+require_once __DIR__ . '/configs/db_connection.php';
+require_once __DIR__ . '/utils/DateHelper.php';
+require_once __DIR__ . '/models/UserModel.php'; 
 
-if (isset($_SESSION['user'])) {
-    $user = getUser($_SESSION['user']['id']);
-} else {
-    $user = null;
+$user = null;
+if (isset($_SESSION['user']['id'])) {
+    global $pdo;
+    $userModel = new UserModel($pdo);
+    $user = $userModel->getById($_SESSION['user']['id']);
 }
 
-function load_page($page, $data = [])
+function load_page($filePath, $data = [])
 {
     extract($data);
-    require __DIR__ . "/pages/{$page}.php";
+    require __DIR__ . "/pages/{$filePath}.php";
 }
 
-$page = isset($_GET['page']) ? $_GET['page'] : '';
+$page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'home';
 
-switch ($page) {
-    case 'home':
-        load_page('home', ['user' => $user]);
-        break;
-    case 'report':
-        load_page('report', ['user' => $user]);
-        break;
-    case 'reports':
-        load_page('reports', ['user' => $user]);
-        break;
-    case 'profile':
-        load_page('profile', ['user' => $user]);
-        break;
-    case 'manage-users':
-        load_page('manage-users', ['user' => $user]);
-        break;
-    case 'report-detail':
-        load_page('report-detail', ['user' => $user]);
-        break;
-    case 'daily-works':
-        load_page('daily-works', ['user' => $user]);
-        break;
-    case 'login':
-        load_page('login', ['user' => $user]);
-        break;
-    case 'register':
-        load_page('register', ['user' => $user]);
-        break;
-    case 'ticket':
-        load_page('ticket', ['user' => $user]);
-        break;
-    case 'add-user':
-        load_page('add-user', ['user' => $user]);
-        break;
-    case 'statistics':
-        load_page('statistics', ['user' => $user]);
-        break;
-    case 'work-categories':
-        load_page('work-categories', ['user' => $user]);
-        break;
-    case 'manage-request-types':
-        load_page('manage-request-types', ['user' => $user]);
-        break;
-    case 'manage-issue-categories':
-        load_page('manage-issue-categories', ['user' => $user]);
-        break;
-    case 'manage-issue-symptoms':
-        load_page('manage-issue-symptoms', ['user' => $user]);
-        break;
-    case 'logout':
-        $_SESSION = [];
+if ($page === 'logout') {
+    $_SESSION = [];
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
+    session_destroy();
+    header("Location: ./?page=login");
+    exit();
+}
 
-        if (ini_get("session.use_cookies")) {
-            $params = session_get_cookie_params();
-            setcookie(
-                session_name(),
-                '',
-                time() - 42000,
-                $params["path"],
-                $params["domain"],
-                $params["secure"],
-                $params["httponly"]
-            );
+$routes = [
+    'home'          => ['file' => 'home', 'roles' => ['ALL']],
+    'login'         => ['file' => 'login', 'roles' => ['ALL']],
+    'register'      => ['file' => 'register', 'roles' => ['ALL']],
+    'report'        => ['file' => 'report', 'roles' => ['ALL']],
+    'reports'       => ['file' => 'reports', 'roles' => ['ALL']],
+    'report-detail' => ['file' => 'report-detail', 'roles' => ['ALL']],
+    'ticket'        => ['file' => 'ticket', 'roles' => ['ALL']],
+
+    'profile'       => ['file' => 'profile', 'roles' => ['SYSTEM', 'ADMIN', 'SERVICE', 'MEMBER']],
+    'daily-works'   => ['file' => 'daily-works', 'roles' => ['SYSTEM', 'ADMIN', 'SERVICE', 'MEMBER']],
+    'statistics'    => ['file' => 'statistics', 'roles' => ['SYSTEM', 'ADMIN', 'SERVICE', 'MEMBER']],
+    'work-categories'=> ['file' => 'work-categories', 'roles' => ['SYSTEM', 'ADMIN']], 
+
+    'manage-request-types'    => ['file' => 'admin/manage-request-types', 'roles' => ['SYSTEM', 'ADMIN']],
+    'manage-issue-categories' => ['file' => 'admin/manage-issue-categories', 'roles' => ['SYSTEM', 'ADMIN']],
+    'manage-issue-symptoms'   => ['file' => 'admin/manage-issue-symptoms', 'roles' => ['SYSTEM', 'ADMIN']],
+
+    'manage-users'  => ['file' => 'system/manage-users', 'roles' => ['SYSTEM']],
+];
+
+if (array_key_exists($page, $routes)) {
+    $route = $routes[$page];
+    $allowedRoles = $route['roles'];
+
+    if (!in_array('ALL', $allowedRoles)) {
+        
+        if (!$user) {
+            header("Location: ./?page=login");
+            exit();
         }
 
-        session_destroy();
+        if (!in_array($user['role'], $allowedRoles)) {
+            http_response_code(403);
+            load_page('404', ['user' => $user]); 
+            exit();
+        }
+    }
 
-        header("Location: ./?page=home");
-        break;
-    case '':
-        load_page('home', ['user' => $user]);
-        break;
-    default:
-        http_response_code(404);
-        load_page('404', ['user' => $user]);
-        break;
+    load_page($route['file'], ['user' => $user]);
+
+} else {
+    http_response_code(404);
+    load_page('404', ['user' => $user]);
 }

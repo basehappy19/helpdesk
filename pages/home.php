@@ -1,10 +1,13 @@
 <?php
-require_once __DIR__ . "../../functions/reports.php";
-require_once __DIR__ . "../../functions/status.php";
-require_once __DIR__ . "../../functions/time.php";
+require_once __DIR__ . "/../models/TicketModel.php"; 
+require_once __DIR__ . "/../models/TicketStatusModel.php"; 
 
-$reports = getRecentReports(5);
-$statistics = getStatusStatistics();
+global $pdo;
+$ticketModel = new TicketModel($pdo);
+$statusModel = new TicketStatusModel($pdo);
+
+$tickets = $ticketModel->getRecentTickets(5); 
+$statistics = $statusModel->getStatusStatistics();
 ?>
 
 <!DOCTYPE html>
@@ -32,7 +35,7 @@ $statistics = getStatusStatistics();
                         <p class="text-indigo-100 text-base md:text-lg opacity-90">โรงพยาบาลเมตตาประชารักษ์ (วัดไร่ขิง)</p>
                     </div>
                     <div>
-                        <a href="./?page=report" class="inline-flex items-center px-6 py-3.5 bg-white text-indigo-600 rounded-2xl font-semibold shadow-sm hover:bg-indigo-50 transition-colors duration-200">
+                        <a href="./?page=ticket" class="inline-flex items-center px-6 py-3.5 bg-white text-indigo-600 rounded-2xl font-semibold shadow-sm hover:bg-indigo-50 transition-colors duration-200">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                             </svg>
@@ -49,7 +52,6 @@ $statistics = getStatusStatistics();
                     $statuses = $statistics['statuses'];
                     $lastIndex = count($statuses) - 1;
 
-                    // ปรับสีให้คลีนขึ้น ใช้สีพาสเทลสำหรับพื้นหลังไอคอน และสีเรียบๆ สำหรับ Progress Bar
                     $statusStyles = [
                         'WAITING' => [
                             'iconBg' => 'bg-amber-50',
@@ -112,7 +114,7 @@ $statistics = getStatusStatistics();
                                     </div>
                                     <div>
                                         <p class="text-sm font-semibold text-gray-700">บันทึกทั้งหมด</p>
-                                        <p class="text-xs text-gray-400 font-medium">TOTAL_REPORTS</p>
+                                        <p class="text-xs text-gray-400 font-medium">รายการทั้งหมด</p>
                                     </div>
                                 </div>
                                 <div class="text-3xl font-bold text-gray-800 tracking-tight">
@@ -126,6 +128,7 @@ $statistics = getStatusStatistics();
 
                         <?php foreach ($statuses as $i => $statistic) :
                             $style = getStatusStyle($statistic['code'], $statusStyles);
+                            // เปลี่ยนคีย์เป็น total_reports ตาม Model
                             $total = array_sum(array_column($statuses, 'total_reports'));
                             $percentage = $total > 0 ? round(($statistic['total_reports'] / $total) * 100, 1) : 0;
                         ?>
@@ -162,7 +165,7 @@ $statistics = getStatusStatistics();
                                 เมนูหลัก
                             </h2>
                             <div class="space-y-3">
-                                <a href="./?page=report" class="flex items-center p-3 border border-gray-100 rounded-xl hover:border-indigo-100 hover:bg-indigo-50/50 transition-colors group">
+                                <a href="./?page=ticket" class="flex items-center p-3 border border-gray-100 rounded-xl hover:border-indigo-100 hover:bg-indigo-50/50 transition-colors group">
                                     <div class="bg-indigo-50 rounded-lg p-2 text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -172,7 +175,7 @@ $statistics = getStatusStatistics();
                                         <h3 class="text-sm font-semibold text-gray-800">แจ้งปัญหา / บริการ</h3>
                                     </div>
                                 </a>
-                                <a href="./?page=reports" class="flex items-center p-3 border border-gray-100 rounded-xl hover:border-blue-100 hover:bg-blue-50/50 transition-colors group">
+                                <a href="./?page=tickets" class="flex items-center p-3 border border-gray-100 rounded-xl hover:border-blue-100 hover:bg-blue-50/50 transition-colors group">
                                     <div class="bg-blue-50 rounded-lg p-2 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
@@ -203,7 +206,7 @@ $statistics = getStatusStatistics();
                                     </svg>
                                     ล่าสุดวันนี้
                                 </h2>
-                                <a href="./?page=reports" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center">
+                                <a href="./?page=tickets" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center">
                                     ดูทั้งหมด
                                     <svg class="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -212,17 +215,17 @@ $statistics = getStatusStatistics();
                             </div>
 
                             <div class="space-y-3 flex-1">
-                                <?php if (empty($reports)): ?>
+                                <?php if (empty($tickets)): ?>
                                     <div class="h-full flex flex-col items-center justify-center text-gray-400">
                                         <p class="text-sm">ไม่มีรายการแจ้งซ่อมใหม่</p>
                                     </div>
                                 <?php else: ?>
-                                    <?php foreach (array_slice($reports, 0, 3) as $report) : ?>
+                                    <?php foreach (array_slice($tickets, 0, 3) as $ticket) : ?>
                                         <div class="group flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-gray-100 transition-colors">
 
-                                            <?php if (!empty($report['thumbnail'])): ?>
+                                            <?php if (!empty($ticket['thumbnail'])): ?>
                                                 <div class="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-                                                    <img src="<?= htmlspecialchars($report['thumbnail']) ?>" class="w-full h-full object-cover" alt="รูปปัญหา">
+                                                    <img src="<?= htmlspecialchars($ticket['thumbnail']) ?>" class="w-full h-full object-cover" alt="รูปปัญหา">
                                                 </div>
                                             <?php else: ?>
                                                 <div class="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-200">
@@ -234,19 +237,20 @@ $statistics = getStatusStatistics();
 
                                             <div class="flex-1 min-w-0">
                                                 <div class="flex items-center gap-2 mb-1">
-                                                    <span class="text-xs font-mono font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded"><?php echo $report['code'] ?></span>
+                                                    <span class="text-xs font-mono font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded"><?php echo $ticket['code'] ?></span>
                                                     <?php
-                                                    $latest = latest_status($report);
-                                                    $statusName  = $latest['name']  ?? '-';
-                                                    $colorClass  = $latest['style'] ?? 'bg-gray-100 text-gray-800';
+                                                    // เปลี่ยนวิธีดึง Status ให้เหมือนหน้าตาราง
+                                                    $latestLog   = $ticket['ticket_status_logs'][0] ?? null;
+                                                    $statusName  = $latestLog ? $latestLog['to_status_name'] : 'รอดำเนินการ';
+                                                    $colorClass  = $latestLog ? $latestLog['to_status_style'] : 'bg-gray-100 text-gray-800';
                                                     ?>
                                                     <span class="px-2 py-0.5 <?php echo $colorClass ?> rounded text-[10px] font-medium whitespace-nowrap"><?php echo $statusName ?></span>
                                                 </div>
-                                                <h3 class="text-sm font-semibold text-gray-800 truncate"><?php echo htmlspecialchars($report['display_symptom'] ?? '-') ?></h3>
-                                                <p class="text-xs text-gray-500 mt-1 truncate"><?php echo htmlspecialchars($report['reporter_name']) ?> • <?php echo diffLargestThai($report['created_at']) ?></p>
+                                                <h3 class="text-sm font-semibold text-gray-800 truncate"><?php echo htmlspecialchars($ticket['display_symptom'] ?? '-') ?></h3>
+                                                <p class="text-xs text-gray-500 mt-1 truncate"><?php echo htmlspecialchars($ticket['reporter_name'] ?? 'ไม่ระบุ') ?> • <?php echo DateHelper::diffLargestThai($ticket['created_at']) ?></p>
                                             </div>
 
-                                            <a target="_blank" href="./?page=report-detail&code=<?php echo $report['code'] ?>" class="text-gray-300 hover:text-indigo-600 transition-colors p-2 mt-1">
+                                            <a target="_blank" href="./?page=ticket-detail&code=<?php echo $ticket['code'] ?>" class="text-gray-300 hover:text-indigo-600 transition-colors p-2 mt-1">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                                 </svg>

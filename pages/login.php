@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . "../../functions/users.php";
+require_once __DIR__ . '/../controllers/ManageUsersController.php';
 
 if(isset($_SESSION['user'])) {
     header("Location: ./?page=home");
@@ -9,22 +9,24 @@ if(isset($_SESSION['user'])) {
 $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === "POST") {
-    $data = [
-        "username" => $_POST['username'] ?? "",
-        "password" => $_POST['password'] ?? ""
-    ];
+    $username = trim($_POST['username'] ?? "");
+    $password = $_POST['password'] ?? "";
 
-    if ($user = Auth($data)) {
-        // Login สำเร็จ
+    $manageController = new ManageUsersController($pdo);
+    
+    $user = $manageController->login($username, $password);
+
+    if ($user) {
         $_SESSION['user'] = $user;
+        
+        $_SESSION['user_id'] = $user['id']; 
+
         header("Location: ./?page=home");
         exit();
     } else {
-        
         $error = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
     }
 }
-
 ?>
 
 <!DOCTYPE html>

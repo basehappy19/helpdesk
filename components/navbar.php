@@ -42,7 +42,7 @@
 
                     <?php if (isset($user) && ($user['role'] === 'SYSTEM' || $user['role'] === 'ADMIN')) : ?>
                         <div class="relative group">
-                            <button id="sys-manage-btn" class="nav-link px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-200 flex items-center gap-2 focus:outline-none">
+                            <button id="admin-manage-btn" class="nav-link px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-200 flex items-center gap-2 focus:outline-none">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -261,7 +261,6 @@
 </nav>
 
 <script>
-    // จัดการแสดงผล Mobile Menu
     const mobileMenuBtn = document.getElementById('mobile-menu-button');
     const mobileMenu = document.getElementById('mobile-menu');
 
@@ -272,20 +271,16 @@
         });
     }
 
-    // ปิดเมนูเมื่อคลิกพื้นที่อื่นบนหน้าจอ
     document.addEventListener('click', function(event) {
         if (mobileMenu && !mobileMenu.contains(event.target) && !mobileMenuBtn.contains(event.target)) {
             mobileMenu.classList.add('hidden');
         }
     });
 
-    // เพิ่ม Active State ให้กับเมนูที่กำลังเปิดอยู่
     const currentPage = new URLSearchParams(window.location.search).get('page') || 'home';
 
-    // สำหรับ Desktop Links ทั่วไป
     document.querySelectorAll('.nav-link').forEach(link => {
-        // เช็คว่ามี query param page ไหม
-        if (link.href.includes('?page=')) {
+        if (link.href && link.href.includes('?page=')) {
             const linkPage = new URL(link.href).searchParams.get('page');
             if (linkPage === currentPage) {
                 link.classList.remove('text-gray-600');
@@ -294,8 +289,8 @@
         }
     });
 
-    // สำหรับปุ่ม Desktop Dropdown (Active เมื่ออยู่หน้าลูก)
-    if (['manage-users', 'work-categories'].includes(currentPage)) {
+    const sysPages = ['manage-users', 'work-categories'];
+    if (sysPages.includes(currentPage)) {
         const sysManageBtn = document.getElementById('sys-manage-btn');
         if (sysManageBtn) {
             sysManageBtn.classList.remove('text-gray-600');
@@ -303,9 +298,17 @@
         }
     }
 
-    // สำหรับ Mobile Links
+    const adminPages = ['manage-request-types', 'manage-issue-categories', 'manage-issue-symptoms'];
+    if (adminPages.includes(currentPage)) {
+        const adminManageBtn = document.getElementById('admin-manage-btn');
+        if (adminManageBtn) {
+            adminManageBtn.classList.remove('text-gray-600');
+            adminManageBtn.classList.add('text-indigo-700', 'bg-indigo-50', 'ring-1', 'ring-indigo-100');
+        }
+    }
+
     document.querySelectorAll('.mobile-nav-link').forEach(link => {
-        if (link.href.includes('?page=')) {
+        if (link.href && link.href.includes('?page=')) {
             const linkPage = new URL(link.href).searchParams.get('page');
             if (linkPage === currentPage) {
                 link.classList.remove('text-gray-600');

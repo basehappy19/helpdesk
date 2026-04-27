@@ -5,7 +5,7 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../vendor/autoload.php';
-require_once __DIR__ . '/../../db/conn.php';
+require_once __DIR__ . '/../../configs/db_connection.php';
 require_once __DIR__ . '/../../functions/users.php';
 
 $input = json_decode(file_get_contents('php://input'), true);

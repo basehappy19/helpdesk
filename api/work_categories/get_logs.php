@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 
-require_once __DIR__ . '/../../db/conn.php';
+require_once __DIR__ . '/../../configs/db_connection.php';
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 

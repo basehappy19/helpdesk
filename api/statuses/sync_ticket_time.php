@@ -1,68 +1,64 @@
 <?php
-// ไฟล์: api/statuses/sync_ticket_time.php
 
-function syncTicketTimestamps($ticketId, $pdo) {
-    // 1. หาเวลาที่รับงานครั้งแรกสุด (เพื่อนำมาเป็นจุดเริ่มต้น SLA)
-    $stmtMin = $pdo->prepare("SELECT MIN(changed_at) FROM ticket_status_logs WHERE ticket_id = :id");
-    $stmtMin->execute([':id' => $ticketId]);
-    $acceptedAt = $stmtMin->fetchColumn();
+declare(strict_types=1);
 
-    // 2. หาสถานะล่าสุด ว่าเสร็จหรือยัง
+/**
+ * Sync ticket timestamps (accepted_at, resolved_at, sla_due_at) จาก status logs
+ *
+ * เรียกหลังทุก INSERT/UPDATE/DELETE ใน ticket_status_logs
+ */
+function syncTicketTimestamps(int $ticketId, PDO $pdo): void
+{
+    // 1. เวลารับเรื่องครั้งแรก = changed_at ของ log แรกสุด
+    $acceptedAt = $pdo->prepare(
+        'SELECT MIN(changed_at) FROM ticket_status_logs WHERE ticket_id = :id'
+    );
+    $acceptedAt->execute([':id' => $ticketId]);
+    $acceptedAtVal = $acceptedAt->fetchColumn() ?: null;
+
+    // 2. สถานะล่าสุด
     $stmtLast = $pdo->prepare("
-        SELECT to_status, changed_at 
-        FROM ticket_status_logs 
-        WHERE ticket_id = :id 
-        ORDER BY changed_at DESC, id DESC 
+        SELECT to_status, changed_at
+        FROM ticket_status_logs
+        WHERE ticket_id = :id
+        ORDER BY changed_at DESC, id DESC
         LIMIT 1
     ");
     $stmtLast->execute([':id' => $ticketId]);
-    $lastLog = $stmtLast->fetch(PDO::FETCH_ASSOC);
+    $lastLog = $stmtLast->fetch();
 
+    // resolved_at = changed_at ของ log สุดท้าย ถ้า to_status = 6 (COMPLETED)
     $resolvedAt = null;
-    // ถ้าสถานะล่าสุดคือ "เสร็จสิ้น" (สมมติ ID = 6) ให้ประทับเวลา
-    if ($lastLog && (int)$lastLog['to_status'] === 6) { 
+    if ($lastLog && (int)$lastLog['to_status'] === 6) {
         $resolvedAt = $lastLog['changed_at'];
     }
 
-    // ----------------------------------------------------
-    // 3. 🟢 คำนวณ SLA Due Date (เวลาที่ควรจะเสร็จ) 🟢
-    // ----------------------------------------------------
+    // 3. คำนวณ SLA Due Date
     $slaDueAt = null;
-    
-    // จะคำนวณก็ต่อเมื่อ "มีเวลารับเรื่องแล้วเท่านั้น"
-    if ($acceptedAt) {
-        // ดึง sla_minutes จากตาราง issue_symptoms โดยอ้างอิงจาก symptom_id ของตั๋วใบนี้
+    if ($acceptedAtVal !== null) {
         $stmtSla = $pdo->prepare("
-            SELECT sym.sla_minutes 
+            SELECT COALESCE(sym.sla_minutes, 15) AS sla_minutes
             FROM tickets t
             LEFT JOIN issue_symptoms sym ON t.symptom_id = sym.id
             WHERE t.id = :id
         ");
         $stmtSla->execute([':id' => $ticketId]);
-        $slaMinutes = (int)$stmtSla->fetchColumn();
+        $slaMinutes = max(1, (int)$stmtSla->fetchColumn());
 
-        // สมมติถ้าตั๋วใบไหนไม่ได้เลือกอาการ หรือลืมตั้งค่า SLA ไว้ ให้ใช้ค่า Default = 15 นาที
-        if ($slaMinutes <= 0) {
-            $slaMinutes = 15;
-        }
-
-        // นำเวลารับเรื่อง (accepted_at) มาบวกด้วยจำนวนนาที SLA
-        $slaDueAt = date('Y-m-d H:i:s', strtotime($acceptedAt . " + {$slaMinutes} minutes"));
+        $slaDueAt = date('Y-m-d H:i:s', strtotime("{$acceptedAtVal} +{$slaMinutes} minutes"));
     }
 
-    // 4. อัปเดตข้อมูลทั้งหมดกลับไปที่ตาราง tickets
-    $stmtUpdate = $pdo->prepare("
-        UPDATE tickets 
-        SET accepted_at = :accepted_at, 
+    // 4. อัปเดต tickets
+    $pdo->prepare("
+        UPDATE tickets
+        SET accepted_at = :accepted_at,
             resolved_at = :resolved_at,
             sla_due_at  = :sla_due_at
         WHERE id = :id
-    ");
-    $stmtUpdate->execute([
-        ':accepted_at' => $acceptedAt ?: null,
+    ")->execute([
+        ':accepted_at' => $acceptedAtVal,
         ':resolved_at' => $resolvedAt,
         ':sla_due_at'  => $slaDueAt,
-        ':id'          => $ticketId
+        ':id'          => $ticketId,
     ]);
 }
-?>

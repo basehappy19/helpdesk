@@ -1,12 +1,11 @@
 <?php
-require_once __DIR__ . "/../models/TicketModel.php"; 
-require_once __DIR__ . "/../models/TicketStatusModel.php"; 
+require_once __DIR__ . "/../models/TicketModel.php";
+require_once __DIR__ . "/../models/TicketStatusModel.php";
 
-global $pdo;
 $ticketModel = new TicketModel($pdo);
 $statusModel = new TicketStatusModel($pdo);
 
-$tickets = $ticketModel->getRecentTickets(5); 
+$tickets    = $ticketModel->getRecentTickets(5);
 $statistics = $statusModel->getStatusStatistics();
 ?>
 

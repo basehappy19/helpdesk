@@ -1,8 +1,23 @@
 <?php
+
+declare(strict_types=1);
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../configs/db_connection.php';
-require_once __DIR__ . '/sync_ticket_time.php'; // 🟢 เรียกใช้ฟังก์ชัน Sync
+require_once __DIR__ . '/sync_ticket_time.php';
+
+// --- Auth ---
+$sessionUser = $_SESSION['user'] ?? null;
+if (!$sessionUser) {
+    http_response_code(401);
+    echo json_encode(['ok' => false, 'message' => 'กรุณาเข้าสู่ระบบ']);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') {
     http_response_code(405);
@@ -10,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'DELETE') {
     exit;
 }
 
-$raw = file_get_contents('php://input');
+$raw  = file_get_contents('php://input');
 $data = json_decode($raw, true);
 
 if (!is_array($data)) {
@@ -19,7 +34,7 @@ if (!is_array($data)) {
     exit;
 }
 
-$logId = isset($data['id']) ? (int)$data['id'] : 0;
+$logId = (int)($data['id'] ?? 0);
 
 if ($logId <= 0) {
     http_response_code(422);
@@ -30,8 +45,7 @@ if ($logId <= 0) {
 try {
     $pdo->beginTransaction();
 
-    // 1. 🟢 หา Ticket ID จาก Log ที่กำลังจะลบ (เพื่อเอาไปใช้อัปเดตตารางตั๋ว)
-    $stmtFind = $pdo->prepare("SELECT ticket_id FROM ticket_status_logs WHERE id = :id");
+    $stmtFind = $pdo->prepare('SELECT ticket_id FROM ticket_status_logs WHERE id = :id');
     $stmtFind->execute([':id' => $logId]);
     $ticketId = $stmtFind->fetchColumn();
 
@@ -42,28 +56,18 @@ try {
         exit;
     }
 
-    // 2. ลบข้อมูล Log ทิ้ง
-    $stmt = $pdo->prepare("DELETE FROM ticket_status_logs WHERE id = :id");
-    $stmt->execute([':id' => $logId]);
+    $pdo->prepare('DELETE FROM ticket_status_logs WHERE id = :id')->execute([':id' => $logId]);
 
-    // 3. 🟢 สั่งประมวลผลเวลาใหม่ 🟢
-    syncTicketTimestamps($ticketId, $pdo);
+    syncTicketTimestamps((int)$ticketId, $pdo);
 
     $pdo->commit();
 
-    echo json_encode([
-        'ok' => true,
-        'message' => 'Status log deleted and ticket synced',
-    ]);
+    echo json_encode(['ok' => true, 'message' => 'Status log deleted']);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    error_log('status/delete error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode([
-        'ok' => false,
-        'message' => 'DB error',
-        'error' => $e->getMessage(),
-    ]);
+    echo json_encode(['ok' => false, 'message' => 'เกิดข้อผิดพลาด กรุณาลองใหม่']);
 }
-?>

@@ -1,69 +1,65 @@
 <?php
 
-class TicketStatusModel {
-    private $pdo;
+declare(strict_types=1);
 
-    public function __construct($pdo) {
+class TicketStatusModel
+{
+    private PDO $pdo;
+
+    public function __construct(PDO $pdo)
+    {
         $this->pdo = $pdo;
     }
 
-    // ดึงสถานะทั้งหมด (ใช้แทน getStatuses เดิม)
-    public function getAllStatuses() {
-        try {
-            $sql = 'SELECT * FROM ticket_statuses ORDER BY sort_order DESC';
-            $stmt = $this->pdo->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            throw new Exception($e->getMessage());
-        }
+    public function getAllStatuses(): array
+    {
+        $stmt = $this->pdo->query('SELECT * FROM ticket_statuses ORDER BY sort_order ASC, id ASC');
+        return $stmt->fetchAll();
     }
 
-    // ดึงสถิติจำนวนงานในแต่ละสถานะ (ใช้แทน getStatusStatistics เดิม)
-    public function getStatusStatistics() {
-        try {
-            $sqlStatuses = "
-                SELECT 
-                    s.id,
-                    s.code,
-                    s.name_th,
-                    s.sort_order,
-                    s.style,
-                    COALESCE(c.total_reports, 0) AS total_reports
-                FROM ticket_statuses s
-                LEFT JOIN (
-                    SELECT 
-                        latest.to_status,
-                        COUNT(*) AS total_reports
-                    FROM (
-                        SELECT
-                            l.ticket_id,
-                            l.to_status,
-                            ROW_NUMBER() OVER (
-                                PARTITION BY l.ticket_id
-                                ORDER BY l.changed_at DESC, l.id DESC
-                            ) AS rn
-                        FROM ticket_status_logs l
-                    ) AS latest
-                    WHERE latest.rn = 1
-                    GROUP BY latest.to_status
-                ) AS c ON c.to_status = s.id
-                ORDER BY s.sort_order ASC
-            ";
+    public function getStatusesForDropdown(): array
+    {
+        $stmt = $this->pdo->query('SELECT id, name_th FROM ticket_statuses ORDER BY sort_order ASC, id ASC');
+        return $stmt->fetchAll();
+    }
 
-            $stmt = $this->pdo->query($sqlStatuses);
-            $statuses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function getStatusStatistics(): array
+    {
+        $sql = "
+            SELECT
+                s.id,
+                s.code,
+                s.name_th,
+                s.sort_order,
+                s.style,
+                COALESCE(c.total_reports, 0) AS total_reports
+            FROM ticket_statuses s
+            LEFT JOIN (
+                SELECT
+                    latest.to_status,
+                    COUNT(*) AS total_reports
+                FROM (
+                    SELECT
+                        l.ticket_id,
+                        l.to_status,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY l.ticket_id
+                            ORDER BY l.changed_at DESC, l.id DESC
+                        ) AS rn
+                    FROM ticket_status_logs l
+                ) AS latest
+                WHERE latest.rn = 1
+                GROUP BY latest.to_status
+            ) AS c ON c.to_status = s.id
+            ORDER BY s.sort_order ASC
+        ";
 
-            // นับจำนวนตั๋วทั้งหมดรวมกัน
-            $sqlTotal = "SELECT COUNT(*) AS total_reports_all FROM tickets";
-            $stmtTotal = $this->pdo->query($sqlTotal);
-            $total = $stmtTotal->fetch(PDO::FETCH_ASSOC);
+        $statuses         = $this->pdo->query($sql)->fetchAll();
+        $totalReportsAll  = (int)$this->pdo->query('SELECT COUNT(*) FROM tickets')->fetchColumn();
 
-            return [
-                "statuses" => $statuses,
-                "total_reports_all" => (int)$total["total_reports_all"]
-            ];
-        } catch (Exception $e) {
-            throw new Exception($e->getMessage());
-        }
+        return [
+            'statuses'          => $statuses,
+            'total_reports_all' => $totalReportsAll,
+        ];
     }
 }

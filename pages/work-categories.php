@@ -1,11 +1,10 @@
 <?php
 
-if (!isset($user['id']) || $user['role'] !== 'SYSTEM') {
+if (!isset($user['id']) || !in_array($user['role'], ['SYSTEM', 'ADMIN'], true)) {
     header('Location: ./');
-    exit();
+    exit;
 }
 
-global $pdo;
 require_once __DIR__ . '/../controllers/WorkCategoryController.php';
 
 $currentPage = isset($_GET['p']) ? max(1, intval($_GET['p'])) : 1;

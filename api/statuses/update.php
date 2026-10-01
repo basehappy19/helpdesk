@@ -1,8 +1,23 @@
 <?php
+
+declare(strict_types=1);
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../configs/db_connection.php';
-require_once __DIR__ . '/sync_ticket_time.php'; 
+require_once __DIR__ . '/sync_ticket_time.php';
+
+// --- Auth ---
+$sessionUser = $_SESSION['user'] ?? null;
+if (!$sessionUser) {
+    http_response_code(401);
+    echo json_encode(['ok' => false, 'message' => 'กรุณาเข้าสู่ระบบ']);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -10,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$raw = file_get_contents('php://input');
+$raw  = file_get_contents('php://input');
 $data = json_decode($raw, true);
 
 if (!is_array($data)) {
@@ -19,34 +34,17 @@ if (!is_array($data)) {
     exit;
 }
 
-// รับค่าจาก Payload
-$logId            = isset($data['log_id']) ? (int)$data['log_id'] : 0;
-$toStatusId       = isset($data['to_status_id']) ? (int)$data['to_status_id'] : 0;
-$symptom          = trim($data['symptom'] ?? '');
-$cause            = trim($data['cause'] ?? '');
-$statusChangedRaw = trim($data['status_changed_at'] ?? '');
-
-// ค่าที่รับเพิ่มมาใหม่ สำหรับผู้แก้ไขปัญหา
-$solverByRaw            = trim($data['solver_by'] ?? '');
-$solverByOtherRemark    = trim($data['solver_by_other_remark'] ?? '');
-
-// จัดการค่า Solver
-$solverId = null;
-if ($solverByRaw === 'other') {
-    $solverId = null; 
-    // เก็บค่า $solverByOtherRemark ตามที่พิมพ์ส่งมา
-} elseif (is_numeric($solverByRaw) && $solverByRaw > 0) {
-    $solverId = (int)$solverByRaw;
-    $solverByOtherRemark = null; // ถ้าเลือก user ในระบบ ให้ล้างค่าช่อง remark ทิ้ง
-} else {
-    // กรณีไม่ได้เลือกหรือส่งค่าว่างมา
-    $solverId = null;
-    $solverByOtherRemark = null;
-}
+$logId            = (int)($data['log_id']            ?? 0);
+$toStatusId       = (int)($data['to_status_id']      ?? 0);
+$symptom          = trim((string)($data['symptom']           ?? ''));
+$cause            = trim((string)($data['cause']             ?? ''));
+$statusChangedRaw = trim((string)($data['status_changed_at'] ?? ''));
+$solverByRaw      = trim((string)($data['solver_by']         ?? ''));
+$solverByOtherRemark = trim((string)($data['solver_by_other_remark'] ?? ''));
 
 $errors = [];
-if ($logId <= 0)     $errors[] = 'log_id is required';
-if ($toStatusId <= 0) $errors[] = 'to_status_id is required';
+if ($logId <= 0)             $errors[] = 'log_id is required';
+if ($toStatusId <= 0)        $errors[] = 'to_status_id is required';
 if ($statusChangedRaw === '') $errors[] = 'status_changed_at is required';
 
 if ($errors) {
@@ -55,17 +53,33 @@ if ($errors) {
     exit;
 }
 
-// แปลง format datetime-local → MySQL format
 $changedAt = str_replace('T', ' ', $statusChangedRaw);
 if (strlen($changedAt) === 16) {
     $changedAt .= ':00';
 }
 
+if (!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $changedAt)) {
+    http_response_code(422);
+    echo json_encode(['ok' => false, 'message' => 'รูปแบบวันที่ไม่ถูกต้อง']);
+    exit;
+}
+
+// จัดการ solver
+$solverId = null;
+if ($solverByRaw === 'other') {
+    // เก็บ remark ไว้
+} elseif (is_numeric($solverByRaw) && (int)$solverByRaw > 0) {
+    $solverId            = (int)$solverByRaw;
+    $solverByOtherRemark = '';
+} else {
+    $solverByOtherRemark = '';
+}
+
 try {
     $pdo->beginTransaction();
 
-    // 1. 🟢 หา Ticket ID ก่อนเพื่อใช้ Sync
-    $stmtFind = $pdo->prepare("SELECT ticket_id FROM ticket_status_logs WHERE id = :id");
+    // ดึง ticket_id จาก log
+    $stmtFind = $pdo->prepare('SELECT ticket_id FROM ticket_status_logs WHERE id = :id');
     $stmtFind->execute([':id' => $logId]);
     $ticketId = $stmtFind->fetchColumn();
 
@@ -76,10 +90,9 @@ try {
         exit;
     }
 
-    // 2. อัปเดตข้อมูล
-    $sql = "
+    $pdo->prepare("
         UPDATE ticket_status_logs
-        SET 
+        SET
             to_status              = :to_status,
             symptom                = :symptom,
             cause                  = :cause,
@@ -88,38 +101,27 @@ try {
             changed_at             = :changed_at
         WHERE id = :log_id
         LIMIT 1
-    ";
-
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([
+    ")->execute([
         ':to_status'              => $toStatusId,
-        ':symptom'                => $symptom,
-        ':cause'                  => $cause,
+        ':symptom'                => $symptom  ?: null,
+        ':cause'                  => $cause    ?: null,
         ':solver_by'              => $solverId,
-        ':solver_by_other_remark' => $solverByOtherRemark,
+        ':solver_by_other_remark' => $solverByOtherRemark ?: null,
         ':changed_at'             => $changedAt,
         ':log_id'                 => $logId,
     ]);
 
-    // 3. 🟢 สั่งประมวลผลเวลาใหม่ 🟢
-    syncTicketTimestamps($ticketId, $pdo);
+    syncTicketTimestamps((int)$ticketId, $pdo);
 
     $pdo->commit();
 
     http_response_code(200);
-    echo json_encode([
-        'ok'      => true,
-        'message' => 'Status log updated and ticket synced',
-    ]);
+    echo json_encode(['ok' => true, 'message' => 'Status log updated']);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
+    error_log('status/update error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode([
-        'ok'      => false,
-        'message' => 'DB error',
-        'error'   => $e->getMessage(),
-    ]);
+    echo json_encode(['ok' => false, 'message' => 'เกิดข้อผิดพลาด กรุณาลองใหม่']);
 }
-?>

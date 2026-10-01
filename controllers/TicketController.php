@@ -1,59 +1,50 @@
 <?php
 
-require_once __DIR__ . "/../models/TicketModel.php"; 
+declare(strict_types=1);
 
-class TicketDetailController {
-    private $pdo;
-    private $user;
-    private $ticketCode;
-    private $ticketModel; // เปลี่ยนชื่อตัวแปรให้ตรงกับ Model
+require_once __DIR__ . '/../models/TicketModel.php';
+require_once __DIR__ . '/../models/TicketStatusModel.php';
 
-    // เปลี่ยนชื่อตัวแปรที่ส่งไป View
-    public $ticketDetails = null; 
-    public $statuses = [];
-    public $canEditStatus = false;
-    public $error = null;
+class TicketDetailController
+{
+    private TicketModel       $ticketModel;
+    private TicketStatusModel $statusModel;
+    private ?array            $user;
+    private string            $ticketCode;
 
-    public function __construct($pdo, $user, $ticketCode) {
-        $this->pdo = $pdo;
-        $this->user = $user;
-        $this->ticketCode = (string)$ticketCode;
-        
-        // เรียกใช้ TicketModel
-        $this->ticketModel = new TicketModel($this->pdo);
-        
+    public ?array $ticketDetails = null;
+    public array  $statuses      = [];
+    public bool   $canEditStatus = false;
+    public ?string $error        = null;
+
+    public function __construct(PDO $pdo, ?array $user, string $ticketCode)
+    {
+        $this->ticketModel  = new TicketModel($pdo);
+        $this->statusModel  = new TicketStatusModel($pdo);
+        $this->user         = $user;
+        $this->ticketCode   = trim($ticketCode);
+
         $this->loadData();
         $this->checkPermissions();
     }
 
-    private function loadData() {
+    private function loadData(): void
+    {
         if ($this->ticketCode === '') {
-            $this->error = "INVALID_CODE";
+            $this->error = 'INVALID_CODE';
             return;
         }
 
-        // เรียกใช้เมธอด getTicketDetails จาก Model
         $this->ticketDetails = $this->ticketModel->getTicketDetails($this->ticketCode);
 
-        // ถ้าพบข้อมูลตั๋วค่อยดึง Status มาแสดงใน Dropdown
         if ($this->ticketDetails) {
-            $this->loadStatuses();
+            $this->statuses = $this->statusModel->getStatusesForDropdown();
         }
     }
 
-    private function loadStatuses() {
-        try {
-            $stmt = $this->pdo->query("SELECT id, name_th FROM ticket_statuses ORDER BY sort_order ASC, id ASC");
-            $this->statuses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log("Error fetching statuses: " . $e->getMessage());
-        }
-    }
-
-    private function checkPermissions() {
-        if (isset($this->user['role']) && in_array($this->user['role'], ['SYSTEM', 'ADMIN', 'SERVICE'])) {
-            $this->canEditStatus = true;
-        }
+    private function checkPermissions(): void
+    {
+        $role = $this->user['role'] ?? '';
+        $this->canEditStatus = in_array($role, ['SYSTEM', 'ADMIN', 'SERVICE'], true);
     }
 }
-?>

@@ -1,6 +1,5 @@
 <?php
 date_default_timezone_set('Asia/Bangkok');
-global $pdo;
 
 require_once __DIR__ . '/../controllers/DailyWorkLogController.php';
 

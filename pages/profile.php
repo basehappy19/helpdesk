@@ -1,6 +1,5 @@
 <?php
 
-global $pdo;
 require_once __DIR__ . '/../controllers/ProfileController.php';
 
 if (!isset($user['id'])) {

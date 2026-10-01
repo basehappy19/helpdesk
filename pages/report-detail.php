@@ -1,23 +1,23 @@
 <?php
-global $pdo;
 
-require_once __DIR__ . '/../controllers/ReportDetailController.php';
+require_once __DIR__ . '/../controllers/TicketController.php';
+require_once __DIR__ . '/../models/UserModel.php';
 
-$ticketCode = isset($_GET['code']) ? $_GET['code'] : 0;
+$ticketCode = isset($_GET['code']) ? trim((string)$_GET['code']) : '';
 
-$controller = new ReportDetailController($pdo, $user ?? null, $ticketCode);
+$controller = new TicketDetailController($pdo, $user ?? null, $ticketCode);
 
-if ($controller->error === "INVALID_CODE") {
+if ($controller->error === 'INVALID_CODE') {
     header('Location: ./?page=reports');
     exit;
 }
 
-$reportDetails = $controller->reportDetails;
+$reportDetails = $controller->ticketDetails;
 $statuses      = $controller->statuses;
 $canEditStatus = $controller->canEditStatus;
 
-$stmtSolvers = $pdo->query("SELECT id, display_th FROM users WHERE solver = 1 ORDER BY display_th ASC");
-$solvers = $stmtSolvers->fetchAll(PDO::FETCH_ASSOC);
+$userModel = new UserModel($pdo);
+$solvers   = $userModel->getSolvers();
 
 if ($reportDetails === null) {
 ?>

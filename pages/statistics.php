@@ -1,5 +1,4 @@
 <?php
-global $pdo;
 
 require_once __DIR__ . '/../utils/DateHelper.php';
 

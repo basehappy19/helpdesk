@@ -1,7 +1,6 @@
 <?php
 
 require_once __DIR__ . "/../models/TicketModel.php";
-global $pdo;
 $ticketModel = new TicketModel($pdo);
 
 $filters = [

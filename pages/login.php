@@ -1,31 +1,33 @@
 <?php
+declare(strict_types=1);
+
 require_once __DIR__ . '/../controllers/ManageUsersController.php';
 
-if(isset($_SESSION['user'])) {
-    header("Location: ./?page=home");
-    exit();
+if (isset($_SESSION['user'])) {
+    header('Location: ./?page=home');
+    exit;
 }
 
-$error = "";
+$error = '';
 
-if ($_SERVER['REQUEST_METHOD'] === "POST") {
-    $username = trim($_POST['username'] ?? "");
-    $password = $_POST['password'] ?? "";
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
 
     $manageController = new ManageUsersController($pdo);
-    
-    $user = $manageController->login($username, $password);
+    $loggedInUser = $manageController->login($username, $password);
 
-    if ($user) {
-        $_SESSION['user'] = $user;
-        
-        $_SESSION['user_id'] = $user['id']; 
+    if ($loggedInUser) {
+        // ป้องกัน session fixation attack
+        session_regenerate_id(true);
 
-        header("Location: ./?page=home");
-        exit();
-    } else {
-        $error = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
+        $_SESSION['user'] = $loggedInUser;
+
+        header('Location: ./?page=home');
+        exit;
     }
+
+    $error = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
 }
 ?>
 

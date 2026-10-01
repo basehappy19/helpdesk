@@ -1,6 +1,5 @@
 <?php
 
-global $pdo;
 require_once './controllers/ManageIssueSymptomsController.php';
 
 $currentPage = isset($_GET['p']) ? max(1, intval($_GET['p'])) : 1;

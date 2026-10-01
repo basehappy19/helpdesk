@@ -1,4 +1,5 @@
 <?php
+global $pdo;
 require_once __DIR__ . "/../models/TicketModel.php";
 require_once __DIR__ . "/../models/TicketStatusModel.php";
 

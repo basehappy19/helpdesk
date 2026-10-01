@@ -39,6 +39,7 @@ if ($sessionUserId !== null) {
 // --- Simple page router ---
 function load_page(string $filePath, array $data = []): void
 {
+    global $pdo;
     extract($data, EXTR_SKIP);
     $fullPath = __DIR__ . "/pages/{$filePath}.php";
     if (!is_file($fullPath)) {
@@ -80,7 +81,8 @@ $routes = [
     'report'                  => ['file' => 'report',                      'roles' => ['ALL']],
     'reports'                 => ['file' => 'reports',                     'roles' => ['ALL']],
     'report-detail'           => ['file' => 'report-detail',               'roles' => ['ALL']],
-    'ticket'                  => ['file' => 'ticket',                      'roles' => ['ALL']],
+    'ticket'                  => ['file' => 'report',                      'roles' => ['ALL']],
+    'tickets'                 => ['file' => 'reports',                     'roles' => ['ALL']],
     'ticket-detail'           => ['file' => 'report-detail',               'roles' => ['ALL']],
 
     'profile'                 => ['file' => 'profile',                     'roles' => ['SYSTEM', 'ADMIN', 'SERVICE', 'MEMBER']],
